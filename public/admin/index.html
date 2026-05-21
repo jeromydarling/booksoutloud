@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>BooksOutLoud &middot; CRM</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/admin/admin.css" />
+</head>
+<body class="admin-body">
+  <header class="admin-bar">
+    <div class="wrap admin-bar-inner">
+      <div class="admin-brand">
+        <a href="/" class="brand">BooksOutLoud</a>
+        <span class="admin-chip">CRM</span>
+      </div>
+      <div class="admin-meta">
+        <span id="admin-email" class="muted small"></span>
+        <a class="muted small" href="/cdn-cgi/access/logout">Sign out</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="admin-main">
+    <div class="wrap">
+      <div class="admin-head">
+        <div>
+          <div class="eyebrow">Performance log</div>
+          <h1>Bookings &amp; history</h1>
+          <p class="muted">Every inquiry that arrives from the booking form lands here. Edit status, add notes, and record performances as they happen.</p>
+        </div>
+        <div class="admin-actions">
+          <input id="search" class="admin-search" type="search" placeholder="Search name, email, org, venue&hellip;" />
+          <button id="new-event-btn" class="btn primary small">+ New event</button>
+        </div>
+      </div>
+
+      <div class="admin-tabs" role="tablist">
+        <button class="admin-tab is-active" role="tab" data-bucket="inquiries">
+          Inquiries <span class="count" data-count="inquiries">0</span>
+        </button>
+        <button class="admin-tab" role="tab" data-bucket="upcoming">
+          Upcoming <span class="count" data-count="upcoming">0</span>
+        </button>
+        <button class="admin-tab" role="tab" data-bucket="history">
+          History <span class="count" data-count="history">0</span>
+        </button>
+      </div>
+
+      <div id="event-list" class="event-list" aria-live="polite">
+        <div class="event-empty muted">Loading&hellip;</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- New event modal -->
+  <dialog id="new-event-dialog" class="admin-dialog">
+    <form id="new-event-form" method="dialog">
+      <div class="dialog-head">
+        <div class="eyebrow">New event</div>
+        <h2>Record a booking</h2>
+      </div>
+      <div class="dialog-grid">
+        <label>Contact name<input name="name" required /></label>
+        <label>Email<input name="email" type="email" required /></label>
+        <label>Organization<input name="organization" /></label>
+        <label>Phone<input name="phone" /></label>
+        <label>Program
+          <select name="program">
+            <option value="">&mdash;</option>
+            <option value="screwtape">The Screwtape Letters</option>
+            <option value="father-brown">Father Brown</option>
+            <option value="seven-last-words">The Seven Last Words</option>
+            <option value="chesterton">Chesterton: Paradox and Wonder</option>
+            <option value="flannery">Flannery O&rsquo;Connor</option>
+            <option value="conversion">Conversion: Augustine</option>
+          </select>
+        </label>
+        <label>Status
+          <select name="status">
+            <option value="inquiry">Inquiry</option>
+            <option value="quoted">Quoted</option>
+            <option value="tentative">Tentative</option>
+            <option value="confirmed" selected>Confirmed</option>
+            <option value="performed">Performed</option>
+            <option value="declined">Declined</option>
+            <option value="canceled">Canceled</option>
+          </select>
+        </label>
+        <label>Date (or window)<input name="event_date" placeholder="e.g. 2026-03-13 or Lent 2026" /></label>
+        <label>Venue<input name="venue" /></label>
+        <label>Audience<input name="audience" placeholder="e.g. parish hall, 120 seats" /></label>
+        <label>Fee (USD)<input name="fee_dollars" type="number" min="0" step="1" /></label>
+        <label>Source
+          <select name="source">
+            <option value="manual" selected>Manual</option>
+            <option value="email">Email</option>
+            <option value="phone">Phone</option>
+            <option value="referral">Referral</option>
+          </select>
+        </label>
+        <label class="full">Notes<textarea name="notes" rows="4"></textarea></label>
+      </div>
+      <div class="dialog-foot">
+        <button type="button" class="btn ghost small" data-close>Cancel</button>
+        <button type="submit" class="btn primary small">Save event</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="admin-toast" role="status" aria-live="polite"></div>
+
+  <script src="/admin/admin.js"></script>
+</body>
+</html>

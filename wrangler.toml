@@ -9,3 +9,16 @@ pages_build_output_dir = "public"
 BOOKING_TO_EMAIL = "jer@jeromydarling.com"
 BOOKING_FROM_EMAIL = "BooksOutLoud <onboarding@resend.dev>"
 SITE_URL = "https://booksoutloud.org"
+# Email allowed to access /admin/*. Must match the address you authorize in
+# Cloudflare Access. Override per-environment in the dashboard if needed.
+ADMIN_EMAIL = "jeromy.darling@gmail.com"
+
+# D1 (SQLite) database for the CRM.
+# One-time setup:
+#   wrangler d1 create booksoutloud-crm
+# then paste the printed database_id below and run:
+#   wrangler d1 execute booksoutloud-crm --remote --file=migrations/0001_init.sql
+[[d1_databases]]
+binding = "DB"
+database_name = "booksoutloud-crm"
+database_id = "REPLACE_WITH_DATABASE_ID_FROM_WRANGLER_OUTPUT"

@@ -67,6 +67,37 @@ export async function onRequestPost({ request, env }) {
   const eventDate = (data.event_date || '').toString().trim().slice(0, 200);
   const audience = (data.audience || '').toString().trim().slice(0, 300);
 
+  // Persist to D1 CRM (best-effort; never block the user-facing email send).
+  if (env.DB) {
+    try {
+      const contact = await env.DB.prepare(
+        `INSERT INTO contacts (name, email, organization)
+         VALUES (?1, ?2, ?3)
+         ON CONFLICT(email) DO UPDATE SET
+           name         = COALESCE(NULLIF(excluded.name, ''), contacts.name),
+           organization = COALESCE(NULLIF(excluded.organization, ''), contacts.organization),
+           updated_at   = datetime('now')
+         RETURNING id`
+      ).bind(name, email.toLowerCase(), organization || null).first();
+
+      if (contact?.id) {
+        await env.DB.prepare(
+          `INSERT INTO events
+             (contact_id, program, event_date, audience, message, source, status)
+           VALUES (?1, ?2, ?3, ?4, ?5, 'web', 'inquiry')`
+        ).bind(
+          contact.id,
+          programKey || null,
+          eventDate || null,
+          audience || null,
+          message,
+        ).run();
+      }
+    } catch (err) {
+      console.error('CRM insert failed', err);
+    }
+  }
+
   if (!env.RESEND_API_KEY) {
     return json(500, { ok: false, message: 'Email service is not configured. Please try again later.' });
   }
