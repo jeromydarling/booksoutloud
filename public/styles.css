@@ -151,6 +151,22 @@ blockquote{margin:0; font-size:clamp(1.4rem,2.2vw,2rem); line-height:1.28; lette
 .list-item:last-child{border-bottom:0; padding-bottom:0}
 .meta{color:var(--muted); font-size:.95rem}
 
+/* Bio block (home) */
+.bio-card{
+  padding:18px; display:grid; grid-template-columns:240px 1fr; gap:28px; align-items:start;
+  background:linear-gradient(180deg, rgba(255,255,255,.58), rgba(255,255,255,.22));
+  border:1px solid rgba(138,100,50,.18); box-shadow:0 16px 36px rgba(31,29,26,.06);
+}
+.bio-card .bio-photo{padding:12px; border:1px solid rgba(138,100,50,.14); background:rgba(255,255,255,.46)}
+.bio-card .bio-photo img{width:100%; aspect-ratio:4/5; object-fit:cover; filter:grayscale(1) contrast(1.06)}
+.bio-card .bio-text{padding:6px 6px 6px 0}
+.bio-card .bio-text p{margin:0 0 14px; color:var(--ink-soft)}
+.bio-card .bio-text p:last-child{margin-bottom:0}
+
+/* Atmosphere split */
+.atmosphere blockquote{margin:0 0 18px}
+.atmosphere p{color:var(--muted); margin:0 0 12px}
+
 /* CTA band */
 .cta-band{padding:56px 0 72px}
 .cta-box{
@@ -206,6 +222,7 @@ blockquote{margin:0; font-size:clamp(1.4rem,2.2vw,2rem); line-height:1.28; lette
   .hero-grid,.grid-2,.program-layout{grid-template-columns:1fr}
   .program-grid,.grid-3{grid-template-columns:1fr 1fr}
   .author-grid{grid-template-columns:repeat(3,1fr)}
+  .bio-card{grid-template-columns:200px 1fr; gap:22px}
 }
 @media (max-width:760px){
   .nav-toggle{display:inline-flex}
@@ -227,6 +244,7 @@ blockquote{margin:0; font-size:clamp(1.4rem,2.2vw,2rem); line-height:1.28; lette
   .caption > * + *{margin-top:8px}
   .form-row{grid-template-columns:1fr}
   .meta-row{grid-template-columns:1fr; gap:4px}
+  .bio-card{grid-template-columns:1fr; gap:18px}
 }
 @media print{
   .site-header,.footer,.cta-band,.nav-toggle{display:none}
