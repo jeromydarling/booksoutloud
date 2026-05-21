@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Book a performance — BooksOutLoud</title>
+  <meta name="description" content="Book a live BooksOutLoud performance for your parish, school, salon, retreat, or library. Tell Jeromy about your date and audience for a tailored reply." />
+  <link rel="canonical" href="https://booksoutloud.org/booking.html" />
+  <meta property="og:title" content="Book a performance — BooksOutLoud" />
+  <meta property="og:description" content="Bring a literary evening to your audience." />
+  <meta property="og:image" content="https://booksoutloud.org/images/jeromy.jpg" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <div class="brand">
+      <div class="brand-mark"><a href="index.html">BooksOutLoud</a></div>
+      <div class="brand-sub">Performed by Jeromy Darling</div>
+    </div>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+    <nav class="nav" id="site-nav">
+      <a href="performances.html">Performances</a>
+      <a href="about.html">About Jeromy</a>
+      <a href="authors.html">Authors</a>
+      <a href="booking.html" class="btn secondary" aria-current="page">Book an Event</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="page-hero">
+    <div class="wrap">
+      <div class="eyebrow">Booking</div>
+      <h1>Bring a literary evening to your audience</h1>
+      <p class="lead">For parishes, schools, salons, retreat settings, libraries, and organizations seeking something intelligent, beautiful, and deeply human. Tell Jeromy about your date and audience and you&rsquo;ll receive a tailored reply within a few days.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap grid-2">
+      <div class="card">
+        <h2 style="margin-bottom:18px;">How booking works</h2>
+        <div class="list">
+          <div class="list-item"><strong>Step 01</strong><div class="meta">Choose a performance or request a recommendation based on your audience, season, and venue.</div></div>
+          <div class="list-item"><strong>Step 02</strong><div class="meta">Share your date, organization, event format, and expected audience size.</div></div>
+          <div class="list-item"><strong>Step 03</strong><div class="meta">Receive a tailored reply with fit, run time, and next booking steps.</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 style="margin-bottom:18px;">Send an inquiry</h2>
+        <p class="meta" style="margin-bottom:22px;">No detail is required, but the more context you provide, the better the recommendation. Required fields are marked with an asterisk.</p>
+
+        <form id="booking-form" class="form" novalidate>
+          <div class="form-row">
+            <div class="form-field">
+              <label for="field-name">Name *</label>
+              <input id="field-name" name="name" type="text" required autocomplete="name" />
+            </div>
+            <div class="form-field">
+              <label for="field-email">Email *</label>
+              <input id="field-email" name="email" type="email" required autocomplete="email" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-field">
+              <label for="field-organization">Organization</label>
+              <input id="field-organization" name="organization" type="text" autocomplete="organization" />
+            </div>
+            <div class="form-field">
+              <label for="field-program">Preferred performance</label>
+              <select id="field-program" name="program">
+                <option value="">No preference yet</option>
+                <option value="screwtape">The Screwtape Letters</option>
+                <option value="father-brown">Father Brown: Mystery and Faith</option>
+                <option value="seven-last-words">The Seven Last Words</option>
+                <option value="chesterton">Chesterton: Paradox and Wonder</option>
+                <option value="flannery">Flannery O&rsquo;Connor: Grace and Judgment</option>
+                <option value="conversion">Conversion: Augustine</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-field">
+              <label for="field-date">Preferred date or window</label>
+              <input id="field-date" name="event_date" type="text" placeholder="e.g. Lent 2026, or Fri Mar 13" />
+            </div>
+            <div class="form-field">
+              <label for="field-audience">Audience &amp; venue</label>
+              <input id="field-audience" name="audience" type="text" placeholder="e.g. parish hall, 120 seats" />
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label for="field-message">Message *</label>
+            <textarea id="field-message" name="message" required placeholder="Tell Jeromy about your event, audience, and any questions."></textarea>
+          </div>
+
+          <div class="honeypot" aria-hidden="true">
+            <label>Leave this field empty
+              <input type="text" name="company_url" tabindex="-1" autocomplete="off" />
+            </label>
+          </div>
+
+          <div id="form-status" class="form-status" role="status" aria-live="polite"></div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Send inquiry</button>
+            <span class="form-note">You&rsquo;ll receive a confirmation in your inbox.</span>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="col"><strong>BooksOutLoud</strong><span>Live literary performance</span></div>
+    <div class="col"><strong>Performed by</strong><span>Jeromy Darling</span></div>
+    <div class="col"><strong>Bookings</strong><a class="inline" href="booking.html">Book an event</a></div>
+    <div class="col"><span>&copy; 2026 BooksOutLoud</span></div>
+  </div>
+</footer>
+
+<script src="site.js" defer></script>
+<script src="booking.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+name = "booksoutloud"
+compatibility_date = "2025-05-01"
+pages_build_output_dir = "public"
+
+# Non-secret config. Secrets (RESEND_API_KEY) are set via:
+#   wrangler pages secret put RESEND_API_KEY
+# or the Cloudflare dashboard under Pages → Settings → Environment variables.
+[vars]
+BOOKING_TO_EMAIL = "jer@jeromydarling.com"
+BOOKING_FROM_EMAIL = "BooksOutLoud <onboarding@resend.dev>"
+SITE_URL = "https://booksoutloud.org"

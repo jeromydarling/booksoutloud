@@ -1,0 +1,7 @@
+# Send /book or /contact to the booking page
+/book        /booking.html  301
+/contact     /booking.html  301
+/programs    /performances.html  301
+
+# Fallback for 404
+/*  /404.html  404

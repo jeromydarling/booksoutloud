@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="BooksOutLoud">
+  <rect width="64" height="64" fill="#f4efe4"/>
+  <g fill="none" stroke="#1f1d1a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 14 H30 a4 4 0 0 1 4 4 v32 a4 4 0 0 0 -4 -4 H10 Z"/>
+    <path d="M54 14 H34 a4 4 0 0 0 -4 4 v32 a4 4 0 0 1 4 -4 H54 Z"/>
+    <path d="M30 18 V46"/>
+  </g>
+  <g fill="#8a6432">
+    <circle cx="46" cy="26" r="1.6"/>
+    <circle cx="46" cy="32" r="1.6"/>
+    <circle cx="46" cy="38" r="1.6"/>
+  </g>
+</svg>

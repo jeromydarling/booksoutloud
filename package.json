@@ -1,0 +1,14 @@
+{
+  "name": "booksoutloud",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Live, immersive performances of great Christian literature, performed by Jeromy Darling.",
+  "scripts": {
+    "dev": "wrangler pages dev public --port 8788",
+    "deploy": "wrangler pages deploy public --project-name booksoutloud",
+    "preview": "python3 -m http.server -d public 8000"
+  },
+  "devDependencies": {
+    "wrangler": "^3.78.0"
+  }
+}
