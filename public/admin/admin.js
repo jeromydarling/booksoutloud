@@ -1,4 +1,6 @@
-// BooksOutLoud admin — vanilla JS, no build step.
+// BooksOutLoud admin — vanilla JS module (loaded with type="module").
+
+import { renderMarkdownToHtml, renderMarkdownToText } from './markdown.js';
 
 const PROGRAM_LABELS = {
   'screwtape': 'The Screwtape Letters',
@@ -24,6 +26,9 @@ const state = {
   events: [],
   subscribers: [],
   subFilter: 'active',
+  broadcasts: [],
+  activeBroadcastPoll: null,
+  recipientCount: 0,
 };
 
 const els = {
@@ -40,6 +45,13 @@ const els = {
   newSubBtn: document.getElementById('new-sub-btn'),
   newSubDialog: document.getElementById('new-sub-dialog'),
   newSubForm: document.getElementById('new-sub-form'),
+  // broadcasts
+  broadcastsView: document.getElementById('broadcasts-view'),
+  broadcastList: document.getElementById('broadcast-list'),
+  newBroadcastBtn: document.getElementById('new-broadcast-btn'),
+  composeDialog: document.getElementById('compose-dialog'),
+  composeForm: document.getElementById('compose-form'),
+  broadcastDetailDialog: document.getElementById('broadcast-detail-dialog'),
   // shared
   tabs: document.querySelectorAll('.admin-tab'),
   search: document.getElementById('search'),
@@ -311,19 +323,216 @@ async function deleteSubscriber(id, row) {
   }
 }
 
+// ── Broadcasts ───────────────────────────────────────────────────────────
+async function loadBroadcasts() {
+  els.broadcastList.innerHTML = `<div class="event-empty muted">Loading&hellip;</div>`;
+  try {
+    const { broadcasts } = await api('/admin/api/broadcasts');
+    state.broadcasts = broadcasts;
+    renderBroadcasts();
+    // If any are still sending, start polling.
+    const sending = broadcasts.find(b => b.status === 'sending' || b.status === 'pending');
+    if (sending) startPollingBroadcast(sending.id);
+  } catch (err) {
+    els.broadcastList.innerHTML = `<div class="event-empty muted">${esc(err.message)}</div>`;
+  }
+}
+
+function renderBroadcasts() {
+  if (!state.broadcasts.length) {
+    els.broadcastList.innerHTML = `<div class="event-empty muted">No broadcasts sent yet. Click <strong>Compose</strong> to send your first dispatch.</div>`;
+    return;
+  }
+  els.broadcastList.innerHTML = state.broadcasts.map(renderBroadcastRow).join('');
+  els.broadcastList.querySelectorAll('.broadcast-row').forEach(row => {
+    const id = parseInt(row.dataset.id, 10);
+    row.addEventListener('click', e => {
+      if (e.target.closest('[data-action="delete"]')) return;
+      openBroadcastDetail(id);
+    });
+    row.querySelector('[data-action="delete"]').addEventListener('click', e => {
+      e.stopPropagation();
+      deleteBroadcast(id, row);
+    });
+  });
+}
+
+function renderBroadcastRow(b) {
+  const created = fmtTimestamp(b.created_at);
+  const progress = b.total_recipients
+    ? `${b.sent_count}/${b.total_recipients}${b.failed_count ? ` (${b.failed_count} failed)` : ''}`
+    : '';
+  return `
+    <div class="broadcast-row" data-id="${b.id}" data-status="${esc(b.status)}">
+      <div class="broadcast-main">
+        <strong>${esc(b.subject)}</strong>
+        <div class="muted">${esc(created)} &middot; ${esc(b.created_by || 'unknown')}${progress ? ' &middot; ' + esc(progress) : ''}</div>
+      </div>
+      <div class="broadcast-status">
+        <span class="badge ${esc(b.status)}">${esc(b.status)}</span>
+      </div>
+      <div class="broadcast-actions">
+        <button type="button" class="btn ghost small" data-action="delete" title="Delete row">&times;</button>
+      </div>
+    </div>
+  `;
+}
+
+function startPollingBroadcast(id) {
+  stopPollingBroadcast();
+  state.activeBroadcastPoll = setInterval(async () => {
+    try {
+      const { broadcast } = await api(`/admin/api/broadcasts/${id}`);
+      // Update the matching row in state.
+      const idx = state.broadcasts.findIndex(b => b.id === id);
+      if (idx !== -1) {
+        state.broadcasts[idx] = {
+          ...state.broadcasts[idx],
+          status: broadcast.status,
+          sent_count: broadcast.sent_count,
+          failed_count: broadcast.failed_count,
+          total_recipients: broadcast.total_recipients,
+          completed_at: broadcast.completed_at,
+        };
+        renderBroadcasts();
+      }
+      if (broadcast.status === 'sent' || broadcast.status === 'failed') {
+        stopPollingBroadcast();
+        showToast(`Broadcast ${broadcast.status} — ${broadcast.sent_count}/${broadcast.total_recipients} delivered.`);
+      }
+    } catch (err) {
+      console.error('poll failed', err);
+    }
+  }, 2500);
+}
+
+function stopPollingBroadcast() {
+  if (state.activeBroadcastPoll) {
+    clearInterval(state.activeBroadcastPoll);
+    state.activeBroadcastPoll = null;
+  }
+}
+
+async function deleteBroadcast(id, row) {
+  if (!confirm('Delete this broadcast record? Emails already sent cannot be recalled.')) return;
+  try {
+    await api(`/admin/api/broadcasts/${id}`, { method: 'DELETE' });
+    row.remove();
+    showToast('Broadcast row deleted.');
+  } catch (err) {
+    showToast(err.message, { error: true });
+  }
+}
+
+async function openBroadcastDetail(id) {
+  try {
+    const { broadcast } = await api(`/admin/api/broadcasts/${id}`);
+    const d = els.broadcastDetailDialog;
+    d.querySelector('[data-detail-status]').textContent = `Broadcast · ${broadcast.status}`;
+    d.querySelector('[data-detail-subject]').textContent = broadcast.subject;
+    const meta = [
+      `Created ${fmtTimestamp(broadcast.created_at)}`,
+      broadcast.completed_at ? `Completed ${fmtTimestamp(broadcast.completed_at)}` : '',
+      `${broadcast.sent_count}/${broadcast.total_recipients} delivered`,
+      broadcast.failed_count ? `${broadcast.failed_count} failed` : '',
+    ].filter(Boolean).join(' · ');
+    d.querySelector('[data-detail-meta]').textContent = meta;
+    d.querySelector('[data-detail-body]').innerHTML = renderMarkdownToHtml(broadcast.body_md || '');
+    const failEl = d.querySelector('[data-detail-failures]');
+    if (Array.isArray(broadcast.failures) && broadcast.failures.length) {
+      failEl.hidden = false;
+      failEl.innerHTML = `<strong>Failures:</strong><br>${broadcast.failures.map(f => `${esc(f.email)} — ${esc(f.error)}`).join('<br>')}`;
+    } else {
+      failEl.hidden = true;
+    }
+    d.showModal();
+  } catch (err) {
+    showToast(err.message, { error: true });
+  }
+}
+
+// ── Composer ─────────────────────────────────────────────────────────────
+async function refreshRecipientCount() {
+  try {
+    const stats = await api('/admin/api/stats');
+    state.recipientCount = stats.subscribers || 0;
+    const el = els.composeDialog.querySelector('[data-recipient-count]');
+    if (el) el.textContent = state.recipientCount
+      ? `Sending to ${state.recipientCount} active subscriber${state.recipientCount === 1 ? '' : 's'}.`
+      : 'No active subscribers yet — only the test send is available.';
+  } catch {/* swallow */}
+}
+
+function updateComposePreview() {
+  const body = els.composeForm.elements.body.value;
+  const char = els.composeForm.querySelector('[data-char]');
+  const preview = els.composeForm.querySelector('[data-preview]');
+  if (char) char.textContent = `${body.length.toLocaleString()} chars`;
+  if (preview) preview.innerHTML = renderMarkdownToHtml(body);
+}
+
+async function fetchServerPreview() {
+  // Confirms our local render matches the server's. Best-effort; silent on error.
+  try {
+    const body = els.composeForm.elements.body.value;
+    const { html } = await api('/admin/api/broadcasts/preview', {
+      method: 'POST', body: JSON.stringify({ body }),
+    });
+    els.composeForm.querySelector('[data-preview]').innerHTML = html;
+    const src = els.composeForm.querySelector('[data-preview-source]');
+    if (src) src.textContent = 'verified';
+  } catch {/* fall back to local */}
+}
+
+async function submitBroadcast(mode) {
+  const fd = new FormData(els.composeForm);
+  const payload = {
+    subject: (fd.get('subject') || '').toString().trim(),
+    body: (fd.get('body') || '').toString(),
+    mode,
+  };
+  if (!payload.subject) { showToast('Subject is required.', { error: true }); return; }
+  if (!payload.body.trim()) { showToast('Body is required.', { error: true }); return; }
+
+  if (mode === 'broadcast') {
+    if (!confirm(`Send to ${state.recipientCount} subscriber${state.recipientCount === 1 ? '' : 's'}? This cannot be undone.`)) return;
+  }
+
+  const buttons = els.composeForm.querySelectorAll('button');
+  buttons.forEach(b => b.disabled = true);
+  try {
+    const res = await api('/admin/api/broadcasts', { method: 'POST', body: JSON.stringify(payload) });
+    if (mode === 'test') {
+      showToast(res.message || 'Test sent.');
+    } else {
+      els.composeDialog.close();
+      els.composeForm.reset();
+      updateComposePreview();
+      showToast(`Sending to ${res.total} subscribers…`);
+      await loadBroadcasts();
+      startPollingBroadcast(res.broadcastId);
+    }
+  } catch (err) {
+    showToast(err.message, { error: true });
+  } finally {
+    buttons.forEach(b => b.disabled = false);
+  }
+}
+
 // ── View switching ───────────────────────────────────────────────────────
 function setActiveView(view) {
   state.view = view;
   els.tabs.forEach(t => t.classList.toggle('is-active', t.dataset.view === view));
-  const showSubs = view === 'subscribers';
-  els.subView.hidden = !showSubs;
-  els.list.hidden = showSubs;
-  els.newEventBtn.hidden = showSubs;
-  if (showSubs) {
-    loadSubscribers();
-  } else {
-    loadEvents();
-  }
+  const isSubs       = view === 'subscribers';
+  const isBroadcasts = view === 'broadcasts';
+  const isEvents     = !isSubs && !isBroadcasts;
+  els.subView.hidden = !isSubs;
+  els.broadcastsView.hidden = !isBroadcasts;
+  els.list.hidden = !isEvents;
+  els.newEventBtn.hidden = !isEvents;
+  if (isSubs)       loadSubscribers();
+  else if (isBroadcasts) loadBroadcasts();
+  else              loadEvents();
 }
 
 // ── Wiring ───────────────────────────────────────────────────────────────
@@ -389,6 +598,37 @@ if (els.newSubBtn && els.newSubDialog && els.newSubForm) {
       showToast(err.message, { error: true });
     }
   });
+}
+
+// Broadcast composer
+if (els.newBroadcastBtn && els.composeDialog && els.composeForm) {
+  const bodyTextarea = els.composeForm.elements.body;
+  const subjectInput = els.composeForm.elements.subject;
+  let previewTimer;
+
+  els.newBroadcastBtn.addEventListener('click', () => {
+    refreshRecipientCount();
+    updateComposePreview();
+    els.composeDialog.showModal();
+    subjectInput.focus();
+  });
+  els.composeDialog.querySelector('[data-close]').addEventListener('click', () => els.composeDialog.close());
+
+  bodyTextarea.addEventListener('input', () => {
+    updateComposePreview();
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(fetchServerPreview, 600);
+  });
+
+  els.composeForm.querySelector('[data-action="send-test"]').addEventListener('click', () => submitBroadcast('test'));
+  els.composeForm.querySelector('[data-action="send-all"]').addEventListener('click', () => submitBroadcast('broadcast'));
+
+  els.composeForm.addEventListener('submit', e => e.preventDefault());
+}
+
+// Broadcast detail dialog close
+if (els.broadcastDetailDialog) {
+  els.broadcastDetailDialog.querySelector('[data-close]').addEventListener('click', () => els.broadcastDetailDialog.close());
 }
 
 // Signed-in email (Cloudflare Access)

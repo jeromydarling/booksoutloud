@@ -50,10 +50,25 @@
         <button class="admin-tab" role="tab" data-view="subscribers">
           Subscribers <span class="count" data-count="subscribers">0</span>
         </button>
+        <button class="admin-tab" role="tab" data-view="broadcasts">
+          Broadcasts
+        </button>
       </div>
 
       <div id="event-list" class="event-list" aria-live="polite">
         <div class="event-empty muted">Loading&hellip;</div>
+      </div>
+
+      <div id="broadcasts-view" class="broadcasts-view" hidden>
+        <div class="subscribers-head">
+          <div class="muted">Compose and send a Salon dispatch. Past sends show below with delivery counts.</div>
+          <div class="subscribers-actions">
+            <button id="new-broadcast-btn" class="btn primary small">+ Compose</button>
+          </div>
+        </div>
+        <div id="broadcast-list" class="broadcast-list" aria-live="polite">
+          <div class="event-empty muted">Loading&hellip;</div>
+        </div>
       </div>
 
       <div id="subscribers-view" class="subscribers-view" hidden>
@@ -75,6 +90,71 @@
       </div>
     </div>
   </main>
+
+  <!-- Compose broadcast modal -->
+  <dialog id="compose-dialog" class="admin-dialog compose-dialog">
+    <form id="compose-form" method="dialog">
+      <div class="dialog-head compose-head">
+        <div>
+          <div class="eyebrow">New broadcast</div>
+          <h2>Compose a Salon dispatch</h2>
+        </div>
+        <div class="muted small" data-recipient-count>Loading recipients&hellip;</div>
+      </div>
+
+      <div class="compose-grid">
+        <div class="compose-editor">
+          <label class="compose-label">Subject
+            <input name="subject" type="text" maxlength="250" required placeholder="Short, specific, intriguing" />
+          </label>
+          <label class="compose-label">Body (Markdown)
+            <textarea name="body" rows="18" required placeholder="# A short dispatch
+
+A short paragraph or two of news. Use **bold**, _italic_, and [links](https://example.com).
+
+- A bullet for a tour stop
+- Another for a recording
+
+> A pull quote from the next program."></textarea>
+          </label>
+          <div class="compose-toolbar muted small">
+            Supports headings (# ## ###), **bold**, _italic_, [links](url), - bullets, > blockquotes, ---.
+            <span class="compose-char" data-char>0</span>
+          </div>
+        </div>
+
+        <div class="compose-preview">
+          <div class="compose-preview-head">
+            <span class="eyebrow">Live preview</span>
+            <span class="muted small" data-preview-source>local</span>
+          </div>
+          <div class="compose-preview-frame" data-preview></div>
+        </div>
+      </div>
+
+      <div class="dialog-foot compose-foot">
+        <button type="button" class="btn ghost small" data-close>Cancel</button>
+        <button type="button" class="btn ghost small" data-action="send-test">Send test to me</button>
+        <button type="button" class="btn primary small" data-action="send-all">Send to subscribers</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Past broadcast detail modal -->
+  <dialog id="broadcast-detail-dialog" class="admin-dialog">
+    <div class="dialog-head">
+      <div class="eyebrow" data-detail-status></div>
+      <h2 data-detail-subject>Broadcast</h2>
+      <div class="muted small" data-detail-meta></div>
+    </div>
+    <div class="dialog-grid" style="grid-template-columns:1fr;">
+      <div data-detail-body class="message-block" style="max-height:50vh; overflow:auto;"></div>
+      <div data-detail-failures class="muted small" hidden></div>
+    </div>
+    <div class="dialog-foot">
+      <button type="button" class="btn ghost small" data-close>Close</button>
+    </div>
+  </dialog>
 
   <!-- New subscriber modal -->
   <dialog id="new-sub-dialog" class="admin-dialog">
@@ -159,6 +239,6 @@
 
   <div id="toast" class="admin-toast" role="status" aria-live="polite"></div>
 
-  <script src="/admin/admin.js"></script>
+  <script type="module" src="/admin/admin.js"></script>
 </body>
 </html>
