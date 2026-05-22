@@ -644,14 +644,17 @@ function renderTicketedEvents() {
     const sold = e.tickets_sold || 0;
     const gross = money(e.gross_cents || 0, e.currency);
     return `
-      <a class="broadcast-row" href="/tickets/${esc(e.slug)}" target="_blank" rel="noopener" data-id="${e.id}" style="text-decoration:none; color:inherit;">
+      <div class="broadcast-row" data-id="${e.id}">
         <div class="broadcast-main">
           <strong>${esc(e.title)}</strong>
           <div class="muted">${esc(when)} · ${esc(e.venue_name)} · ${esc(sold)} ticket${sold === 1 ? '' : 's'} sold · ${esc(gross)}</div>
         </div>
         <div class="broadcast-status"><span class="badge ${esc(e.status)}">${esc(e.status)}</span></div>
-        <div class="broadcast-actions"><span class="muted small">/tickets/${esc(e.slug)}</span></div>
-      </a>
+        <div class="broadcast-actions" style="display:flex; gap:6px;">
+          <a class="btn ghost small" href="/tickets/${esc(e.slug)}" target="_blank" rel="noopener">Public page</a>
+          <a class="btn ghost small" href="/admin/checkin/${esc(e.id)}">Door</a>
+        </div>
+      </div>
     `;
   }).join('');
 }
