@@ -1,6 +1,6 @@
 // BooksOutLoud admin — vanilla JS module (loaded with type="module").
 
-import { renderMarkdownToHtml, renderMarkdownToText } from './markdown.js';
+import { Editor } from './editor.js';
 
 const PROGRAM_LABELS = {
   'screwtape': 'The Screwtape Letters',
@@ -52,6 +52,7 @@ const els = {
   composeDialog: document.getElementById('compose-dialog'),
   composeForm: document.getElementById('compose-form'),
   broadcastDetailDialog: document.getElementById('broadcast-detail-dialog'),
+  editorHost: document.getElementById('compose-editor-host'),
   // shared
   tabs: document.querySelectorAll('.admin-tab'),
   search: document.getElementById('search'),
@@ -437,7 +438,7 @@ async function openBroadcastDetail(id) {
       broadcast.failed_count ? `${broadcast.failed_count} failed` : '',
     ].filter(Boolean).join(' · ');
     d.querySelector('[data-detail-meta]').textContent = meta;
-    d.querySelector('[data-detail-body]').innerHTML = renderMarkdownToHtml(broadcast.body_md || '');
+    d.querySelector('[data-detail-body]').innerHTML = broadcast.body_html || '';
     const failEl = d.querySelector('[data-detail-failures]');
     if (Array.isArray(broadcast.failures) && broadcast.failures.length) {
       failEl.hidden = false;
@@ -463,36 +464,47 @@ async function refreshRecipientCount() {
   } catch {/* swallow */}
 }
 
-function updateComposePreview() {
-  const body = els.composeForm.elements.body.value;
-  const char = els.composeForm.querySelector('[data-char]');
-  const preview = els.composeForm.querySelector('[data-preview]');
-  if (char) char.textContent = `${body.length.toLocaleString()} chars`;
-  if (preview) preview.innerHTML = renderMarkdownToHtml(body);
+let composeEditor = null;
+function ensureEditor() {
+  if (composeEditor) return composeEditor;
+  composeEditor = new Editor(els.editorHost, {
+    placeholder: 'Write your dispatch. Highlight text to add a link (Ctrl/Cmd+K).',
+    onChange: () => {
+      const html = composeEditor.getHTML();
+      const char = els.composeForm.querySelector('[data-char]');
+      if (char) char.textContent = `${html.replace(/<[^>]+>/g, '').length.toLocaleString()} chars`;
+      // Show the editor's own HTML in the preview immediately, then fetch the
+      // server-styled version after a short debounce.
+      const preview = els.composeForm.querySelector('[data-preview]');
+      if (preview) preview.innerHTML = html;
+      const src = els.composeForm.querySelector('[data-preview-source]');
+      if (src) src.textContent = 'local';
+    },
+  });
+  return composeEditor;
 }
 
 async function fetchServerPreview() {
-  // Confirms our local render matches the server's. Best-effort; silent on error.
+  if (!composeEditor) return;
   try {
-    const body = els.composeForm.elements.body.value;
+    const body_html = composeEditor.getHTML();
     const { html } = await api('/admin/api/broadcasts/preview', {
-      method: 'POST', body: JSON.stringify({ body }),
+      method: 'POST', body: JSON.stringify({ body_html }),
     });
     els.composeForm.querySelector('[data-preview]').innerHTML = html;
     const src = els.composeForm.querySelector('[data-preview-source]');
     if (src) src.textContent = 'verified';
-  } catch {/* fall back to local */}
+  } catch {/* keep local */}
 }
 
 async function submitBroadcast(mode) {
   const fd = new FormData(els.composeForm);
-  const payload = {
-    subject: (fd.get('subject') || '').toString().trim(),
-    body: (fd.get('body') || '').toString(),
-    mode,
-  };
-  if (!payload.subject) { showToast('Subject is required.', { error: true }); return; }
-  if (!payload.body.trim()) { showToast('Body is required.', { error: true }); return; }
+  const subject = (fd.get('subject') || '').toString().trim();
+  const body_html = composeEditor ? composeEditor.getHTML() : '';
+  const payload = { subject, body_html, mode };
+
+  if (!subject) { showToast('Subject is required.', { error: true }); return; }
+  if (composeEditor && composeEditor.isEmpty()) { showToast('Body is required.', { error: true }); return; }
 
   if (mode === 'broadcast') {
     if (!confirm(`Send to ${state.recipientCount} subscriber${state.recipientCount === 1 ? '' : 's'}? This cannot be undone.`)) return;
@@ -507,7 +519,9 @@ async function submitBroadcast(mode) {
     } else {
       els.composeDialog.close();
       els.composeForm.reset();
-      updateComposePreview();
+      if (composeEditor) composeEditor.reset();
+      const preview = els.composeForm.querySelector('[data-preview]');
+      if (preview) preview.innerHTML = '';
       showToast(`Sending to ${res.total} subscribers…`);
       await loadBroadcasts();
       startPollingBroadcast(res.broadcastId);
@@ -601,23 +615,22 @@ if (els.newSubBtn && els.newSubDialog && els.newSubForm) {
 }
 
 // Broadcast composer
-if (els.newBroadcastBtn && els.composeDialog && els.composeForm) {
-  const bodyTextarea = els.composeForm.elements.body;
+if (els.newBroadcastBtn && els.composeDialog && els.composeForm && els.editorHost) {
   const subjectInput = els.composeForm.elements.subject;
   let previewTimer;
 
   els.newBroadcastBtn.addEventListener('click', () => {
     refreshRecipientCount();
-    updateComposePreview();
+    ensureEditor();
     els.composeDialog.showModal();
     subjectInput.focus();
   });
   els.composeDialog.querySelector('[data-close]').addEventListener('click', () => els.composeDialog.close());
 
-  bodyTextarea.addEventListener('input', () => {
-    updateComposePreview();
+  // Debounce a server-side preview after every editor change.
+  els.editorHost.addEventListener('input', () => {
     clearTimeout(previewTimer);
-    previewTimer = setTimeout(fetchServerPreview, 600);
+    previewTimer = setTimeout(fetchServerPreview, 500);
   });
 
   els.composeForm.querySelector('[data-action="send-test"]').addEventListener('click', () => submitBroadcast('test'));

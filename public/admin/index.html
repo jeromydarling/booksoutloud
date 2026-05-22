@@ -107,25 +107,17 @@
           <label class="compose-label">Subject
             <input name="subject" type="text" maxlength="250" required placeholder="Short, specific, intriguing" />
           </label>
-          <label class="compose-label">Body (Markdown)
-            <textarea name="body" rows="18" required placeholder="# A short dispatch
-
-A short paragraph or two of news. Use **bold**, _italic_, and [links](https://example.com).
-
-- A bullet for a tour stop
-- Another for a recording
-
-> A pull quote from the next program."></textarea>
-          </label>
+          <label class="compose-label">Body</label>
+          <div id="compose-editor-host" data-editor></div>
           <div class="compose-toolbar muted small">
-            Supports headings (# ## ###), **bold**, _italic_, [links](url), - bullets, > blockquotes, ---.
-            <span class="compose-char" data-char>0</span>
+            <span>Headings, bold, italic, links, bullets, blockquote, divider. Paste is converted to plain text.</span>
+            <span class="compose-char" data-char>0 chars</span>
           </div>
         </div>
 
         <div class="compose-preview">
           <div class="compose-preview-head">
-            <span class="eyebrow">Live preview</span>
+            <span class="eyebrow">Email preview</span>
             <span class="muted small" data-preview-source>local</span>
           </div>
           <div class="compose-preview-frame" data-preview></div>

@@ -1,10 +1,11 @@
 -- Newsletter broadcasts log
 -- Applied via the Cloudflare bindings MCP on 2026-05-22.
+-- body_md was dropped in the same session when the composer moved from
+-- Markdown to WYSIWYG; body_html now stores the sanitized editor output.
 
 CREATE TABLE IF NOT EXISTS broadcasts (
   id                INTEGER PRIMARY KEY AUTOINCREMENT,
   subject           TEXT    NOT NULL,
-  body_md           TEXT    NOT NULL,
   body_html         TEXT    NOT NULL,
   body_text         TEXT    NOT NULL,
   status            TEXT    NOT NULL DEFAULT 'pending'

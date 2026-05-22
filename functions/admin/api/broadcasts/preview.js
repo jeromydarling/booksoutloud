@@ -1,10 +1,10 @@
 // POST /admin/api/broadcasts/preview
 //
-// Server-side Markdown rendering. The browser also renders Markdown live for
-// the composer, but the canonical render comes from here so what Jeromy sees
-// in preview is what subscribers will receive.
+// Server-side sanitize + style + plain-text extraction. The browser editor
+// is constrained, but this is the canonical pipeline — what the preview
+// pane shows for the right side of the composer.
 
-import { renderMarkdownToHtml, renderMarkdownToText } from '../../../_lib/markdown.js';
+import { sanitizeHtml, styleHtmlForEmail, htmlToPlainText } from '../../../_lib/htmlsafe.js';
 
 function json(status, body) {
   return new Response(JSON.stringify(body), {
@@ -16,11 +16,13 @@ function json(status, body) {
 export async function onRequestPost({ request }) {
   let data;
   try { data = await request.json(); } catch { return json(400, { ok: false, message: 'Invalid JSON.' }); }
-  const body = (data.body || '').toString();
-  if (body.length > 50_000) return json(400, { ok: false, message: 'Body too long.' });
+  const raw = (data.body_html || data.body || '').toString();
+  if (raw.length > 200_000) return json(400, { ok: false, message: 'Body too long.' });
+  const safe = sanitizeHtml(raw);
   return json(200, {
     ok: true,
-    html: renderMarkdownToHtml(body),
-    text: renderMarkdownToText(body),
+    html: styleHtmlForEmail(safe),
+    raw_safe: safe,
+    text: htmlToPlainText(safe),
   });
 }

@@ -1,9 +1,9 @@
 // /admin/api/broadcasts
 //   GET   — list past broadcasts
-//   POST  — create a broadcast and start sending in the background
+//   POST  — create a broadcast (or send a test) and dispatch in the background
 
-import { sendEmail, emailShell, escapeHtml } from '../../_lib/email.js';
-import { renderMarkdownToHtml, renderMarkdownToText } from '../../_lib/markdown.js';
+import { sendEmail, emailShell } from '../../_lib/email.js';
+import { sanitizeHtml, styleHtmlForEmail, htmlToPlainText } from '../../_lib/htmlsafe.js';
 
 function json(status, body) {
   return new Response(JSON.stringify(body), {
@@ -19,7 +19,7 @@ export async function onRequestGet({ env }) {
     const { results } = await env.DB.prepare(
       `SELECT id, subject, status, total_recipients, sent_count, failed_count,
               created_at, started_at, completed_at, created_by,
-              SUBSTR(body_md, 1, 240) AS preview
+              SUBSTR(body_text, 1, 240) AS preview
        FROM broadcasts ORDER BY created_at DESC LIMIT 100`,
     ).all();
     return json(200, { ok: true, broadcasts: results || [] });
@@ -35,22 +35,25 @@ export async function onRequestPost(ctx) {
   try { data = await request.json(); } catch { return json(400, { ok: false, message: 'Invalid JSON.' }); }
 
   const subject = (data.subject || '').toString().trim();
-  const bodyMd  = (data.body || '').toString();
+  const rawHtml = (data.body_html || data.body || '').toString();
   const mode    = data.mode === 'test' ? 'test' : 'broadcast';
 
   if (!subject || subject.length > 250) {
     return json(400, { ok: false, message: 'Subject is required (max 250 chars).' });
   }
-  if (!bodyMd.trim() || bodyMd.length > 50_000) {
-    return json(400, { ok: false, message: 'Body is required (max 50,000 chars).' });
+  if (!rawHtml.trim() || rawHtml.length > 200_000) {
+    return json(400, { ok: false, message: 'Body is required (max 200,000 chars of HTML).' });
   }
 
-  const bodyHtml = renderMarkdownToHtml(bodyMd);
-  const bodyText = renderMarkdownToText(bodyMd);
-  const createdBy = (request.headers.get('Cf-Access-Authenticated-User-Email') || '').toLowerCase() || null;
+  const cleanHtml = sanitizeHtml(rawHtml);
+  if (!cleanHtml.replace(/<[^>]+>/g, '').trim()) {
+    return json(400, { ok: false, message: 'Body looks empty after sanitization.' });
+  }
+  const styledHtml = styleHtmlForEmail(cleanHtml);
+  const plainText  = htmlToPlainText(cleanHtml);
+  const createdBy  = (request.headers.get('Cf-Access-Authenticated-User-Email') || '').toLowerCase() || null;
 
   if (mode === 'test') {
-    // Send a single test to the admin without writing a broadcast row.
     const fromEmail = env.BOOKING_FROM_EMAIL || 'BooksOutLoud <onboarding@resend.dev>';
     const toEmail   = env.BOOKING_TO_EMAIL   || 'jer@jeromydarling.com';
     const siteUrl   = env.SITE_URL           || 'https://booksoutloud.org';
@@ -61,8 +64,8 @@ export async function onRequestPost(ctx) {
         to: toEmail,
         replyTo: toEmail,
         subject: `[TEST] ${subject}`,
-        text: composeFinalText(bodyText, unsubUrl, siteUrl, true),
-        html: composeFinalHtml(subject, bodyHtml, unsubUrl, siteUrl, true),
+        text: composeFinalText(plainText, unsubUrl, siteUrl, true),
+        html: composeFinalHtml(subject, styledHtml, unsubUrl, siteUrl, true),
       });
       return json(200, { ok: true, message: 'Test sent.' });
     } catch (err) {
@@ -71,8 +74,6 @@ export async function onRequestPost(ctx) {
     }
   }
 
-  // Real broadcast: snapshot the active recipient list now, create the row,
-  // and hand off to a background sender via ctx.waitUntil.
   let recipients = [];
   try {
     const { results } = await env.DB.prepare(
@@ -83,38 +84,37 @@ export async function onRequestPost(ctx) {
     console.error('recipient query failed', err);
     return json(500, { ok: false, message: 'Could not load recipients.' });
   }
-
   if (!recipients.length) {
     return json(400, { ok: false, message: 'No active subscribers to send to yet.' });
   }
 
   const inserted = await env.DB.prepare(
-    `INSERT INTO broadcasts (subject, body_md, body_html, body_text, status, total_recipients, created_by)
-     VALUES (?1, ?2, ?3, ?4, 'pending', ?5, ?6)
+    `INSERT INTO broadcasts (subject, body_html, body_text, status, total_recipients, created_by)
+     VALUES (?1, ?2, ?3, 'pending', ?4, ?5)
      RETURNING id`,
-  ).bind(subject, bodyMd, bodyHtml, bodyText, recipients.length, createdBy).first();
+  ).bind(subject, cleanHtml, plainText, recipients.length, createdBy).first();
 
   const broadcastId = inserted.id;
-  ctx.waitUntil(sendBroadcast(env, broadcastId, subject, bodyHtml, bodyText, recipients));
+  ctx.waitUntil(sendBroadcast(env, broadcastId, subject, styledHtml, plainText, recipients));
 
   return json(200, { ok: true, broadcastId, total: recipients.length });
 }
 
-function composeFinalHtml(subject, bodyHtml, unsubUrl, siteUrl, isTest) {
+function composeFinalHtml(subject, styledBodyHtml, unsubUrl, siteUrl, isTest) {
   return emailShell({
     preheader: isTest ? 'Preview send' : undefined,
     title: subject,
-    bodyHtml: `<div style="font-size:16px; color:#1f1d1a;">${bodyHtml}</div>`,
+    bodyHtml: `<div style="font-size:16px; color:#1f1d1a;">${styledBodyHtml}</div>`,
     footerHtml: `You&rsquo;re receiving this because you joined the BooksOutLoud Salon dispatch at <a href="${siteUrl}" style="color:#8a6432;">booksoutloud.org</a>. <a href="${unsubUrl}" style="color:#8a6432;">Unsubscribe</a> any time.`,
   });
 }
 
-function composeFinalText(bodyText, unsubUrl, siteUrl, isTest) {
+function composeFinalText(plainText, unsubUrl, siteUrl, isTest) {
   const head = isTest ? '[TEST — preview send]\n\n' : '';
-  return `${head}${bodyText}\n\n—\nBooksOutLoud · ${siteUrl}\nUnsubscribe: ${unsubUrl}\n`;
+  return `${head}${plainText}\n\n—\nBooksOutLoud · ${siteUrl}\nUnsubscribe: ${unsubUrl}\n`;
 }
 
-async function sendBroadcast(env, broadcastId, subject, bodyHtml, bodyText, recipients) {
+async function sendBroadcast(env, broadcastId, subject, styledHtml, plainText, recipients) {
   const fromEmail = env.BOOKING_FROM_EMAIL || 'BooksOutLoud <onboarding@resend.dev>';
   const replyTo   = env.BOOKING_TO_EMAIL   || 'jer@jeromydarling.com';
   const siteUrl   = env.SITE_URL           || 'https://booksoutloud.org';
@@ -135,8 +135,8 @@ async function sendBroadcast(env, broadcastId, subject, bodyHtml, bodyText, reci
         to: r.email,
         replyTo,
         subject,
-        text: composeFinalText(bodyText, unsubUrl, siteUrl, false),
-        html: composeFinalHtml(subject, bodyHtml, unsubUrl, siteUrl, false),
+        text: composeFinalText(plainText, unsubUrl, siteUrl, false),
+        html: composeFinalHtml(subject, styledHtml, unsubUrl, siteUrl, false),
       });
       sent++;
     } catch (err) {
@@ -144,7 +144,6 @@ async function sendBroadcast(env, broadcastId, subject, bodyHtml, bodyText, reci
       console.error('broadcast send failed for', r.email, err);
     }
 
-    // Persist progress every 5 sends so the admin poll sees movement.
     if (sent % 5 === 0 || failures.length % 5 === 0) {
       try {
         await env.DB.prepare(
@@ -152,7 +151,6 @@ async function sendBroadcast(env, broadcastId, subject, bodyHtml, bodyText, reci
         ).bind(broadcastId, sent, failures.length).run();
       } catch (e) { console.error('progress update failed', e); }
     }
-
     if (i < recipients.length - 1) {
       await new Promise(r => setTimeout(r, SEND_DELAY_MS));
     }
@@ -162,17 +160,10 @@ async function sendBroadcast(env, broadcastId, subject, bodyHtml, bodyText, reci
   try {
     await env.DB.prepare(
       `UPDATE broadcasts
-         SET status = ?2,
-             sent_count = ?3,
-             failed_count = ?4,
-             failures = ?5,
-             completed_at = datetime('now')
+         SET status = ?2, sent_count = ?3, failed_count = ?4, failures = ?5, completed_at = datetime('now')
        WHERE id = ?1`,
     ).bind(
-      broadcastId,
-      finalStatus,
-      sent,
-      failures.length,
+      broadcastId, finalStatus, sent, failures.length,
       failures.length ? JSON.stringify(failures.slice(0, 200)) : null,
     ).run();
   } catch (err) {

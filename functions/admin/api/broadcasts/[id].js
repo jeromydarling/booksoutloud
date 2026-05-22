@@ -15,7 +15,7 @@ export async function onRequestGet({ params, env }) {
 
   try {
     const row = await env.DB.prepare(
-      `SELECT id, subject, body_md, body_html, body_text, status,
+      `SELECT id, subject, body_html, body_text, status,
               total_recipients, sent_count, failed_count, failures,
               created_by, created_at, started_at, completed_at
        FROM broadcasts WHERE id = ?1`,

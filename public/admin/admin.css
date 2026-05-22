@@ -198,6 +198,68 @@
 .badge.sent     { color: #1f5d3a; border-color: #1f5d3a55; }
 .badge.test     { color: #234274; border-color: #23427455; }
 
+/* WYSIWYG editor */
+.bol-editor {
+  border: 1px solid rgba(138,100,50,.22);
+  background: rgba(255,255,255,.6);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.bol-editor-toolbar {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(138,100,50,.18);
+  background: rgba(244,239,228,.72);
+}
+.bol-editor-group { display: flex; gap: 2px; }
+.bol-editor-group button {
+  font: inherit; font-size: .88rem;
+  min-width: 30px; padding: 5px 9px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: var(--ink);
+  cursor: pointer;
+  line-height: 1;
+}
+.bol-editor-group button:hover {
+  background: rgba(255,255,255,.78);
+  border-color: rgba(138,100,50,.2);
+}
+.bol-editor-group + .bol-editor-group {
+  padding-left: 8px;
+  margin-left: 2px;
+  border-left: 1px solid rgba(138,100,50,.15);
+}
+.bol-editor-area {
+  min-height: 280px; max-height: 60vh; overflow: auto;
+  padding: 18px 22px;
+  font-family: var(--font-serif); font-size: 1rem; line-height: 1.6;
+  color: var(--ink);
+  outline: none;
+}
+.bol-editor-area:empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  pointer-events: none;
+}
+.bol-editor-area h1 { font-size: 1.6rem; margin: 18px 0 10px; letter-spacing: -.015em; }
+.bol-editor-area h2 { font-size: 1.3rem; margin: 18px 0 10px; letter-spacing: -.01em; }
+.bol-editor-area h3 { font-size: 1.1rem; margin: 16px 0 8px;  letter-spacing: -.005em; }
+.bol-editor-area p  { margin: 0 0 12px; }
+.bol-editor-area blockquote {
+  margin: 12px 0; padding: 6px 0 6px 14px;
+  border-left: 3px solid var(--brass);
+  color: var(--muted); font-style: italic;
+}
+.bol-editor-area ul, .bol-editor-area ol { margin: 8px 0 14px; padding-left: 22px; }
+.bol-editor-area li { margin: 0 0 6px; }
+.bol-editor-area a  { color: var(--brass); }
+.bol-editor-area hr {
+  border: none; border-top: 1px solid rgba(138,100,50,.22);
+  margin: 18px 0;
+}
+
 /* Composer dialog */
 .compose-dialog { max-width: 980px; width: 95vw; }
 .compose-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
