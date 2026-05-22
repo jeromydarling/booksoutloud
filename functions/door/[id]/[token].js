@@ -1,9 +1,12 @@
-// GET /admin/checkin/:id
+// GET /door/:id/:token
 //
-// Mobile-first door check-in UI for one ticketed event. Gated by Cloudflare
-// Access via the /admin/_middleware. Renders the page server-side so it works
-// instantly when the door staff opens it on a phone with shaky coverage; the
-// dynamic bits are vanilla JS hitting /admin/api/checkin/:id and /:code.
+// Public volunteer door check-in page. Token-gated — anyone with the URL
+// can run check-in for this one event without a Cloudflare Access login.
+// Shares all client code (CSS + JS) with /admin/checkin/<id> via the
+// /checkin/ static asset path. The page wires data-api-base so the same
+// JS hits the token endpoints instead of the admin ones.
+
+import { loadDoorEvent } from '../../_lib/door.js';
 
 function html(s, status = 200) {
   return new Response(s, {
@@ -33,18 +36,12 @@ function fmtDateTime(s) {
 }
 
 export async function onRequestGet({ params, env }) {
-  const id = parseInt(params.id, 10);
-  if (!Number.isInteger(id) || id <= 0) {
-    return html(`<!DOCTYPE html><html><body><p>Bad event id.</p></body></html>`, 400);
+  const ev = await loadDoorEvent(env, params.id, params.token);
+  if (!ev) {
+    return html(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Not found</title></head><body style="font-family:Georgia,serif; padding:40px; text-align:center;"><h1>This link is invalid or has been revoked.</h1><p>Check with the organizer for a fresh link.</p></body></html>`, 404);
   }
 
-  const ev = await env.DB.prepare(
-    `SELECT te.*, v.name AS venue_name FROM ticketed_events te
-     JOIN venues v ON v.id = te.venue_id WHERE te.id = ?`,
-  ).bind(id).first();
-  if (!ev) {
-    return html(`<!DOCTYPE html><html><body><p>Event not found.</p><p><a href="/admin/">Return to admin</a></p></body></html>`, 404);
-  }
+  const apiBase = `/api/door/${ev.id}/${encodeURIComponent(params.token)}`;
 
   const page = `<!DOCTYPE html>
 <html lang="en">
@@ -58,7 +55,7 @@ export async function onRequestGet({ params, env }) {
   <link rel="stylesheet" href="/styles.css" />
   <link rel="stylesheet" href="/checkin/checkin.css" />
 </head>
-<body class="door-body" data-event-id="${esc(id)}" data-api-base="/admin/api/checkin">
+<body class="door-body" data-event-id="${esc(ev.id)}" data-api-base="${esc(apiBase)}">
   <header class="door-bar">
     <div class="door-bar-inner">
       <div class="door-meta">
@@ -66,7 +63,7 @@ export async function onRequestGet({ params, env }) {
         <h1>${esc(ev.title)}</h1>
         <div class="muted small">${esc(fmtDateTime(ev.starts_at))} &middot; ${esc(ev.location_name || ev.venue_name)}</div>
       </div>
-      <a class="door-back muted small" href="/admin/">&larr; Admin</a>
+      <div class="muted small">Volunteer</div>
     </div>
   </header>
 

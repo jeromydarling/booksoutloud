@@ -1,8 +1,22 @@
-// Door check-in client. Pairs with /admin/checkin/<id> + /admin/api/checkin.
+// Door check-in client. Mounted on two surfaces:
+//   /admin/checkin/<id>            apiBase = /admin/api/checkin
+//   /door/<id>/<token>             apiBase = /api/door/<id>/<token>
+//
+// The page provides <body data-event-id="..." data-api-base="...">.
+// All HTTP routes are derived from apiBase + eventId. For /admin/api/checkin
+// the per-event roster URL is /admin/api/checkin/<id>; for the door variant
+// the eventId is already in the path, so the roster URL IS apiBase.
 
 (function () {
-  const eventId = parseInt(document.body.dataset.eventId, 10);
-  if (!Number.isInteger(eventId)) return;
+  const eventId  = parseInt(document.body.dataset.eventId, 10);
+  const apiBase  = document.body.dataset.apiBase;
+  if (!Number.isInteger(eventId) || !apiBase) return;
+
+  const apiContainsEvent = apiBase.endsWith(`/${eventId}`);
+  const rosterUrl = apiContainsEvent ? apiBase : `${apiBase}/${eventId}`;
+  const codeUrl = (code) => apiContainsEvent
+    ? `${apiBase}/${encodeURIComponent(code)}`
+    : `${apiBase}/${eventId}/${encodeURIComponent(code)}`;
 
   const els = {
     form:   document.getElementById('checkin-form'),
@@ -13,7 +27,6 @@
     undo:   document.querySelector('[data-action="undo"]'),
   };
   let lastCode = null;
-  let capacity = null;
 
   function esc(s) {
     return String(s ?? '').replace(/[&<>"']/g, c => ({
@@ -34,10 +47,9 @@
 
   async function refresh() {
     try {
-      const res = await fetch(`/admin/api/checkin/${eventId}`, { headers: { 'Accept': 'application/json' } });
+      const res = await fetch(rosterUrl, { headers: { 'Accept': 'application/json' } });
       const body = await res.json();
       if (!res.ok || !body.ok) throw new Error(body.message || `HTTP ${res.status}`);
-      capacity = body.event.capacity || null;
       setCount('sold', body.sold);
       setCount('checked_in', body.checked_in);
       setCount('remaining', Math.max(0, (body.sold || 0) - (body.checked_in || 0)));
@@ -79,7 +91,7 @@
     if (!code) return;
     setResult('working', 'Checking…', code);
     try {
-      const res = await fetch(`/admin/api/checkin/${eventId}/${encodeURIComponent(code)}`, { method: 'POST' });
+      const res = await fetch(codeUrl(code), { method: 'POST' });
       const body = await res.json();
       if (res.status >= 500) throw new Error(body.message || `HTTP ${res.status}`);
       lastCode = body.ticket?.code || null;
@@ -116,7 +128,7 @@
     if (!lastCode) return;
     if (!confirm('Undo the last check-in?')) return;
     try {
-      const res = await fetch(`/admin/api/checkin/${eventId}/${encodeURIComponent(lastCode)}`, { method: 'DELETE' });
+      const res = await fetch(codeUrl(lastCode), { method: 'DELETE' });
       const body = await res.json();
       if (!res.ok || !body.ok) throw new Error(body.message || `HTTP ${res.status}`);
       setResult('idle', 'Check-in undone.', lastCode);
@@ -134,13 +146,11 @@
   });
   els.undo.addEventListener('click', undoLast);
 
-  // Auto-submit on full code length (10 chars including dash patterns).
   els.input.addEventListener('input', () => {
     const cleaned = els.input.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (cleaned.length === 10) submitCode(els.input.value);
   });
 
-  // Initial load + soft refresh every 30s to keep counts honest across devices.
   refresh();
   setInterval(refresh, 30000);
   els.input.focus();
