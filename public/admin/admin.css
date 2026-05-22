@@ -146,6 +146,36 @@
 .badge.declined,
 .badge.canceled  { color: #7a2c2c; border-color: #7a2c2c55; }
 
+/* Subscribers view */
+.subscribers-view { display: flex; flex-direction: column; gap: 14px; }
+.subscribers-head {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 16px; flex-wrap: wrap;
+}
+.subscribers-actions {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+}
+.subscribers-actions select {
+  font: inherit; padding: 8px 10px;
+  background: rgba(255,255,255,.6); border: 1px solid rgba(138,100,50,.28);
+  color: var(--ink); border-radius: 2px;
+}
+.subscriber-list { display: flex; flex-direction: column; gap: 8px; }
+.sub-row {
+  display: grid; grid-template-columns: 1fr 110px 200px;
+  gap: 16px; align-items: center;
+  padding: 12px 16px;
+  background: rgba(255,255,255,.55);
+  border: 1px solid rgba(138,100,50,.18);
+}
+.sub-row .sub-main strong { font-family: var(--font-serif); font-size: 1rem; }
+.sub-row .sub-main .muted { font-size: .82rem; }
+.sub-row .sub-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.sub-row .sub-actions button[data-action="delete"] { padding: 6px 10px; }
+.badge.active       { color: #1f5d3a; border-color: #1f5d3a55; }
+.badge.unsubscribed { color: #7a2c2c; border-color: #7a2c2c55; }
+.badge.bounced      { color: #6b4f1d; }
+
 /* New event dialog */
 .admin-dialog {
   border: 1px solid rgba(138,100,50,.28); background: var(--paper);
@@ -198,4 +228,7 @@
   .dialog-grid { grid-template-columns: 1fr; }
   .admin-head { flex-direction: column; align-items: flex-start; }
   .admin-search { min-width: 0; width: 100%; }
+  .sub-row { grid-template-columns: 1fr; gap: 8px; }
+  .sub-row .sub-actions { justify-content: flex-start; }
+  .subscribers-head { flex-direction: column; align-items: flex-start; }
 }

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Salon dispatch — BooksOutLoud newsletter</title>
+  <meta name="description" content="Join the BooksOutLoud Salon dispatch. A few times a year — what I'm reading aloud, where I'll be performing next, and the occasional private recording. No promos, no rented lists." />
+  <link rel="canonical" href="https://booksoutloud.org/newsletter.html" />
+  <meta property="og:title" content="The Salon dispatch — BooksOutLoud" />
+  <meta property="og:description" content="A few times a year. What I'm reading aloud, where I'll be performing, the occasional private recording." />
+  <meta property="og:image" content="https://booksoutloud.org/images/jeromy.jpg" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <div class="brand">
+      <div class="brand-mark"><a href="index.html">BooksOutLoud</a></div>
+      <div class="brand-sub">Performed by Jeromy Darling</div>
+    </div>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+    <nav class="nav" id="site-nav">
+      <a href="performances.html">Performances</a>
+      <a href="about.html">About Jeromy</a>
+      <a href="authors.html">Authors</a>
+      <a href="booking.html" class="btn secondary">Book an Event</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="page-hero">
+    <div class="wrap">
+      <div class="eyebrow">The Salon dispatch</div>
+      <h1>A short letter, a few times a year</h1>
+      <p class="lead">What I&rsquo;m reading aloud, where I&rsquo;ll be performing next, and the occasional private recording &mdash; usually a short excerpt from a program in development. That&rsquo;s it. Nothing else.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap grid-2">
+      <div class="card">
+        <h2 style="margin-bottom:14px;">What you&rsquo;ll receive</h2>
+        <div class="list">
+          <div class="list-item"><strong>Tour notes</strong><div class="meta">A heads-up when I&rsquo;ll be performing in your region.</div></div>
+          <div class="list-item"><strong>Reading aloud</strong><div class="meta">Short reflections on the writers in the repertoire &mdash; Chesterton, Lewis, O&rsquo;Connor, Sheen, Augustine.</div></div>
+          <div class="list-item"><strong>Private recordings</strong><div class="meta">Occasional excerpts from a program in rehearsal, before they reach the public site.</div></div>
+        </div>
+        <p class="muted" style="margin-top:20px; font-size:.95rem;">No promos. No rented lists. One unsubscribe click ends it.</p>
+      </div>
+      <div class="card">
+        <h2 style="margin-bottom:14px;">Join the list</h2>
+        <p class="meta" style="margin-bottom:22px;">Your name is optional. Your email is the only thing required.</p>
+        <form id="newsletter-form" class="form" novalidate>
+          <div class="form-field">
+            <label for="nl-name">Name <span class="muted" style="text-transform:none; letter-spacing:0;">(optional)</span></label>
+            <input id="nl-name" name="name" type="text" autocomplete="name" />
+          </div>
+          <div class="form-field">
+            <label for="nl-email">Email *</label>
+            <input id="nl-email" name="email" type="email" required autocomplete="email" />
+          </div>
+          <input type="text" name="company_url" tabindex="-1" autocomplete="off" aria-hidden="true" class="hp-field" />
+          <input type="hidden" name="source" value="newsletter_page" />
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Subscribe</button>
+            <p class="form-status" data-status aria-live="polite"></p>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="col"><strong>BooksOutLoud</strong><span>Live literary performance</span></div>
+    <div class="col"><strong>Performed by</strong><span>Jeromy Darling</span></div>
+    <div class="col"><strong>Booking</strong><span><a href="booking.html">Send an inquiry</a></span></div>
+    <div class="col"><strong>&copy; <span id="yr"></span></strong><span>BooksOutLoud.org</span></div>
+  </div>
+</footer>
+
+<script src="site.js"></script>
+<script>document.getElementById('yr').textContent = new Date().getFullYear();</script>
+</body>
+</html>

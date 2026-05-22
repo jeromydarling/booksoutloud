@@ -201,6 +201,26 @@
       </div>
     </div>
   </section>
+
+  <section class="signup-band" id="newsletter">
+    <div class="wrap">
+      <div class="signup-box">
+        <div class="signup-copy">
+          <div class="eyebrow">The Salon dispatch</div>
+          <h2>Join the BooksOutLoud list</h2>
+          <p>A few times a year &mdash; what I&rsquo;m reading aloud, where I&rsquo;ll be performing next, and the occasional private recording. No promos, no rented lists. <a class="inline" href="newsletter.html">More about the dispatch &rarr;</a></p>
+        </div>
+        <form id="signup-form" class="signup-form" novalidate>
+          <label class="visually-hidden" for="signup-email">Email address</label>
+          <input id="signup-email" name="email" type="email" placeholder="you@example.com" required autocomplete="email" />
+          <input type="text" name="company_url" tabindex="-1" autocomplete="off" aria-hidden="true" class="hp-field" />
+          <input type="hidden" name="source" value="home" />
+          <button type="submit" class="btn primary">Subscribe</button>
+          <p class="signup-status" data-status aria-live="polite"></p>
+        </form>
+      </div>
+    </div>
+  </section>
 </main>
 
 <footer class="footer">
@@ -208,6 +228,7 @@
     <div class="col"><strong>BooksOutLoud</strong><span>Live literary performance</span></div>
     <div class="col"><strong>Performed by</strong><span>Jeromy Darling</span></div>
     <div class="col"><strong>Bookings</strong><a class="inline" href="booking.html">Book an event</a></div>
+    <div class="col"><strong>Newsletter</strong><a class="inline" href="newsletter.html">Join the dispatch</a></div>
     <div class="col"><span>&copy; <span id="yr">2026</span> BooksOutLoud</span></div>
   </div>
 </footer>

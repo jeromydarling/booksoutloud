@@ -167,6 +167,38 @@ blockquote{margin:0; font-size:clamp(1.4rem,2.2vw,2rem); line-height:1.28; lette
 .atmosphere blockquote{margin:0 0 18px}
 .atmosphere p{color:var(--muted); margin:0 0 12px}
 
+/* Newsletter signup band */
+.signup-band{padding:0 0 72px}
+.signup-box{
+  padding:30px 34px; display:grid; grid-template-columns:1.4fr 1fr; gap:32px; align-items:center;
+  border:1px solid rgba(138,100,50,.18);
+  background:linear-gradient(180deg, rgba(244,239,228,.7), rgba(255,255,255,.35));
+  box-shadow:0 12px 28px rgba(31,29,26,.04);
+}
+.signup-copy h2{font-size:clamp(1.4rem,2vw,1.7rem); letter-spacing:-.01em; margin:4px 0 8px}
+.signup-copy p{margin:0; color:var(--muted); font-size:.98rem}
+.signup-form{display:grid; grid-template-columns:1fr auto; gap:10px; align-items:start}
+.signup-form input[type="email"]{
+  font:inherit; padding:11px 14px; color:var(--ink);
+  background:rgba(255,255,255,.78); border:1px solid rgba(138,100,50,.28); border-radius:2px;
+}
+.signup-form input[type="email"]:focus{outline:none; border-color:var(--accent); background:#fff}
+.signup-form .btn{align-self:stretch}
+.signup-form .hp-field{position:absolute; left:-9999px; width:1px; height:1px; opacity:0; pointer-events:none}
+.signup-status{
+  grid-column:1 / -1; margin:6px 0 0;
+  font-family:var(--font-sans); font-size:.78rem; letter-spacing:.06em; color:var(--muted);
+  min-height:1.2em;
+}
+.signup-status.is-success{color:#244327}
+.signup-status.is-error{color:#5b1d1d}
+
+.visually-hidden{
+  position:absolute !important; height:1px; width:1px;
+  overflow:hidden; clip:rect(1px,1px,1px,1px); white-space:nowrap;
+}
+.hp-field{position:absolute; left:-9999px; width:1px; height:1px; opacity:0; pointer-events:none}
+
 /* CTA band */
 .cta-band{padding:56px 0 72px}
 .cta-box{
@@ -245,9 +277,11 @@ blockquote{margin:0; font-size:clamp(1.4rem,2.2vw,2rem); line-height:1.28; lette
   .form-row{grid-template-columns:1fr}
   .meta-row{grid-template-columns:1fr; gap:4px}
   .bio-card{grid-template-columns:1fr; gap:18px}
+  .signup-box{grid-template-columns:1fr; padding:22px}
+  .signup-form{grid-template-columns:1fr}
 }
 @media print{
-  .site-header,.footer,.cta-band,.nav-toggle{display:none}
+  .site-header,.footer,.cta-band,.signup-band,.nav-toggle{display:none}
   body{background:#fff}
   body::before{display:none}
 }

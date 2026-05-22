@@ -38,22 +38,69 @@
       </div>
 
       <div class="admin-tabs" role="tablist">
-        <button class="admin-tab is-active" role="tab" data-bucket="inquiries">
+        <button class="admin-tab is-active" role="tab" data-view="inquiries">
           Inquiries <span class="count" data-count="inquiries">0</span>
         </button>
-        <button class="admin-tab" role="tab" data-bucket="upcoming">
+        <button class="admin-tab" role="tab" data-view="upcoming">
           Upcoming <span class="count" data-count="upcoming">0</span>
         </button>
-        <button class="admin-tab" role="tab" data-bucket="history">
+        <button class="admin-tab" role="tab" data-view="history">
           History <span class="count" data-count="history">0</span>
+        </button>
+        <button class="admin-tab" role="tab" data-view="subscribers">
+          Subscribers <span class="count" data-count="subscribers">0</span>
         </button>
       </div>
 
       <div id="event-list" class="event-list" aria-live="polite">
         <div class="event-empty muted">Loading&hellip;</div>
       </div>
+
+      <div id="subscribers-view" class="subscribers-view" hidden>
+        <div class="subscribers-head">
+          <div class="muted">Manage who receives the Salon dispatch. Export anytime to send through Resend.</div>
+          <div class="subscribers-actions">
+            <select id="sub-filter">
+              <option value="active">Active</option>
+              <option value="unsubscribed">Unsubscribed</option>
+              <option value="all">All</option>
+            </select>
+            <a id="sub-export" class="btn ghost small" href="/admin/api/subscribers?format=csv">Export CSV</a>
+            <button id="new-sub-btn" class="btn primary small">+ Add subscriber</button>
+          </div>
+        </div>
+        <div id="subscriber-list" class="subscriber-list" aria-live="polite">
+          <div class="event-empty muted">Loading&hellip;</div>
+        </div>
+      </div>
     </div>
   </main>
+
+  <!-- New subscriber modal -->
+  <dialog id="new-sub-dialog" class="admin-dialog">
+    <form id="new-sub-form" method="dialog">
+      <div class="dialog-head">
+        <div class="eyebrow">Subscriber</div>
+        <h2>Add to the list</h2>
+      </div>
+      <div class="dialog-grid">
+        <label class="full">Email<input name="email" type="email" required /></label>
+        <label class="full">Name<input name="name" /></label>
+        <label class="full">Source
+          <select name="source">
+            <option value="manual" selected>Manual</option>
+            <option value="performance">Performance</option>
+            <option value="referral">Referral</option>
+            <option value="email">Email</option>
+          </select>
+        </label>
+      </div>
+      <div class="dialog-foot">
+        <button type="button" class="btn ghost small" data-close>Cancel</button>
+        <button type="submit" class="btn primary small">Add</button>
+      </div>
+    </form>
+  </dialog>
 
   <!-- New event modal -->
   <dialog id="new-event-dialog" class="admin-dialog">

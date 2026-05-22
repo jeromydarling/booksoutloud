@@ -16,19 +16,33 @@ const STATUS_LABELS = {
   declined: 'Declined', canceled: 'Canceled',
 };
 
+const EVENT_VIEWS = new Set(['inquiries','upcoming','history']);
+
 const state = {
-  bucket: 'inquiries',
+  view: 'inquiries',
   search: '',
   events: [],
+  subscribers: [],
+  subFilter: 'active',
 };
 
 const els = {
+  // events
   list: document.getElementById('event-list'),
+  newEventBtn: document.getElementById('new-event-btn'),
+  newEventDialog: document.getElementById('new-event-dialog'),
+  newEventForm: document.getElementById('new-event-form'),
+  // subscribers
+  subView: document.getElementById('subscribers-view'),
+  subList: document.getElementById('subscriber-list'),
+  subFilter: document.getElementById('sub-filter'),
+  subExport: document.getElementById('sub-export'),
+  newSubBtn: document.getElementById('new-sub-btn'),
+  newSubDialog: document.getElementById('new-sub-dialog'),
+  newSubForm: document.getElementById('new-sub-form'),
+  // shared
   tabs: document.querySelectorAll('.admin-tab'),
   search: document.getElementById('search'),
-  newBtn: document.getElementById('new-event-btn'),
-  dialog: document.getElementById('new-event-dialog'),
-  form: document.getElementById('new-event-form'),
   toast: document.getElementById('toast'),
   email: document.getElementById('admin-email'),
 };
@@ -41,13 +55,19 @@ function esc(s) {
 
 function fmtDate(s) {
   if (!s) return '';
-  // ISO YYYY-MM-DD → "Mar 13, 2026"
   const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
   if (iso) {
     const d = new Date(`${iso[1]}-${iso[2]}-${iso[3]}T00:00:00`);
     if (!isNaN(d)) return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   }
   return s;
+}
+
+function fmtTimestamp(s) {
+  if (!s) return '';
+  const d = new Date(s.includes('T') ? s : s + 'Z');
+  if (isNaN(d)) return s;
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function programLabel(key) {
@@ -76,60 +96,60 @@ async function api(path, init) {
   return body;
 }
 
+// ── Stats ────────────────────────────────────────────────────────────────
 async function loadStats() {
   try {
     const stats = await api('/admin/api/stats');
-    for (const [k, v] of Object.entries({ inquiries: stats.inquiries, upcoming: stats.upcoming, history: stats.history })) {
+    for (const k of ['inquiries','upcoming','history','subscribers']) {
       const el = document.querySelector(`.count[data-count="${k}"]`);
-      if (el) el.textContent = v || 0;
+      if (el) el.textContent = stats[k] || 0;
     }
   } catch (err) {
     console.error(err);
   }
 }
 
+// ── Events ───────────────────────────────────────────────────────────────
 async function loadEvents() {
   els.list.innerHTML = `<div class="event-empty muted">Loading&hellip;</div>`;
-  const params = new URLSearchParams({ bucket: state.bucket });
+  const params = new URLSearchParams({ bucket: state.view });
   if (state.search) params.set('q', state.search);
   try {
     const { events } = await api(`/admin/api/events?${params}`);
     state.events = events;
-    render();
+    renderEvents();
   } catch (err) {
     els.list.innerHTML = `<div class="event-empty muted">${esc(err.message)}</div>`;
   }
 }
 
-function render() {
+function renderEvents() {
   if (!state.events.length) {
     els.list.innerHTML = `<div class="event-empty muted">No events in this view yet.</div>`;
     return;
   }
-  els.list.innerHTML = state.events.map(renderRow).join('');
-  // Wire status dropdowns + form actions
+  els.list.innerHTML = state.events.map(renderEventRow).join('');
   els.list.querySelectorAll('details.event-row').forEach(row => {
     const id = parseInt(row.dataset.id, 10);
-    row.querySelector('.status-select').addEventListener('change', e => updateField(id, 'status', e.target.value, row));
+    row.querySelector('.status-select').addEventListener('change', e => updateEventField(id, 'status', e.target.value, row));
     row.querySelectorAll('[data-field]').forEach(input => {
       input.addEventListener('blur', () => {
         const field = input.dataset.field;
         let value = input.value;
         if (field === 'fee_dollars') {
           value = value === '' ? '' : Math.round(parseFloat(value) * 100);
-          return updateField(id, 'fee_cents', value, row);
+          return updateEventField(id, 'fee_cents', value, row);
         }
-        updateField(id, field, value, row);
+        updateEventField(id, field, value, row);
       });
     });
     row.querySelector('[data-action="delete"]').addEventListener('click', () => deleteEvent(id, row));
   });
 }
 
-function renderRow(e) {
+function renderEventRow(e) {
   const dateMain = fmtDate(e.event_date) || '<span class="muted">No date</span>';
-  const created = new Date(e.created_at + 'Z');
-  const createdStr = isNaN(created) ? e.created_at : created.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const createdStr = fmtTimestamp(e.created_at).replace(/, \d{4}$/, '');
   const feeDollars = e.fee_cents != null ? (e.fee_cents / 100).toFixed(0) : '';
   const message = e.message ? `<div class="full"><label>Original message</label><div class="message-block">${esc(e.message)}</div></div>` : '';
   return `
@@ -176,7 +196,7 @@ function renderRow(e) {
   `;
 }
 
-async function updateField(id, field, value, row) {
+async function updateEventField(id, field, value, row) {
   const stateEl = row.querySelector('[data-state]');
   const original = stateEl.textContent;
   stateEl.textContent = 'Saving…';
@@ -186,13 +206,12 @@ async function updateField(id, field, value, row) {
     stateEl.textContent = 'Saved.';
     if (field === 'status') {
       loadStats();
-      // If the new status no longer belongs in this bucket, reload the list.
-      const bucketStatuses = {
+      const viewStatuses = {
         inquiries: ['inquiry','quoted','tentative'],
         upcoming: ['confirmed'],
         history: ['performed','declined','canceled'],
-      }[state.bucket];
-      if (!bucketStatuses.includes(value)) {
+      }[state.view];
+      if (viewStatuses && !viewStatuses.includes(value)) {
         showToast(`Moved to ${STATUS_LABELS[value]}.`);
         return loadEvents();
       }
@@ -216,39 +235,133 @@ async function deleteEvent(id, row) {
   }
 }
 
-// Tab + search wiring
-els.tabs.forEach(t => {
-  t.addEventListener('click', () => {
-    els.tabs.forEach(x => x.classList.remove('is-active'));
-    t.classList.add('is-active');
-    state.bucket = t.dataset.bucket;
-    loadEvents();
+// ── Subscribers ──────────────────────────────────────────────────────────
+async function loadSubscribers() {
+  els.subList.innerHTML = `<div class="event-empty muted">Loading&hellip;</div>`;
+  const params = new URLSearchParams({ status: state.subFilter });
+  if (state.search) params.set('q', state.search);
+  try {
+    const { subscribers } = await api(`/admin/api/subscribers?${params}`);
+    state.subscribers = subscribers;
+    renderSubscribers();
+  } catch (err) {
+    els.subList.innerHTML = `<div class="event-empty muted">${esc(err.message)}</div>`;
+  }
+  // Keep the CSV export link in sync with the current filter.
+  if (els.subExport) {
+    const qs = new URLSearchParams({ status: state.subFilter, format: 'csv' });
+    els.subExport.href = `/admin/api/subscribers?${qs}`;
+  }
+}
+
+function renderSubscribers() {
+  if (!state.subscribers.length) {
+    els.subList.innerHTML = `<div class="event-empty muted">No subscribers in this view yet.</div>`;
+    return;
+  }
+  els.subList.innerHTML = state.subscribers.map(renderSubRow).join('');
+  els.subList.querySelectorAll('.sub-row').forEach(row => {
+    const id = parseInt(row.dataset.id, 10);
+    row.querySelector('[data-action="toggle"]').addEventListener('click', () => toggleSubscriber(id, row));
+    row.querySelector('[data-action="delete"]').addEventListener('click', () => deleteSubscriber(id, row));
   });
+}
+
+function renderSubRow(s) {
+  const active = s.status === 'active';
+  const toggleLabel = active ? 'Unsubscribe' : 'Reactivate';
+  return `
+    <div class="sub-row" data-id="${s.id}" data-status="${s.status}">
+      <div class="sub-main">
+        <strong>${esc(s.email)}</strong>
+        <div class="muted">${esc(s.name || '')}${s.name ? ' &middot; ' : ''}joined ${esc(fmtTimestamp(s.created_at))} &middot; source: ${esc(s.source)}</div>
+      </div>
+      <div class="sub-status">
+        <span class="badge ${esc(s.status)}">${esc(s.status)}</span>
+      </div>
+      <div class="sub-actions">
+        <button type="button" class="btn ghost small" data-action="toggle">${toggleLabel}</button>
+        <button type="button" class="btn ghost small" data-action="delete" title="Delete row">&times;</button>
+      </div>
+    </div>
+  `;
+}
+
+async function toggleSubscriber(id, row) {
+  const newStatus = row.dataset.status === 'active' ? 'unsubscribed' : 'active';
+  try {
+    await api(`/admin/api/subscribers/${id}`, { method: 'PATCH', body: JSON.stringify({ status: newStatus }) });
+    showToast(newStatus === 'active' ? 'Reactivated.' : 'Unsubscribed.');
+    loadStats();
+    loadSubscribers();
+  } catch (err) {
+    showToast(err.message, { error: true });
+  }
+}
+
+async function deleteSubscriber(id, row) {
+  if (!confirm('Delete this subscriber row? This removes the email from the database entirely.')) return;
+  try {
+    await api(`/admin/api/subscribers/${id}`, { method: 'DELETE' });
+    row.remove();
+    showToast('Subscriber deleted.');
+    loadStats();
+  } catch (err) {
+    showToast(err.message, { error: true });
+  }
+}
+
+// ── View switching ───────────────────────────────────────────────────────
+function setActiveView(view) {
+  state.view = view;
+  els.tabs.forEach(t => t.classList.toggle('is-active', t.dataset.view === view));
+  const showSubs = view === 'subscribers';
+  els.subView.hidden = !showSubs;
+  els.list.hidden = showSubs;
+  els.newEventBtn.hidden = showSubs;
+  if (showSubs) {
+    loadSubscribers();
+  } else {
+    loadEvents();
+  }
+}
+
+// ── Wiring ───────────────────────────────────────────────────────────────
+els.tabs.forEach(t => {
+  t.addEventListener('click', () => setActiveView(t.dataset.view));
 });
+
 let searchTimer;
 els.search.addEventListener('input', e => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => {
     state.search = e.target.value.trim();
-    loadEvents();
+    if (state.view === 'subscribers') loadSubscribers();
+    else loadEvents();
   }, 220);
 });
 
+if (els.subFilter) {
+  els.subFilter.addEventListener('change', () => {
+    state.subFilter = els.subFilter.value;
+    loadSubscribers();
+  });
+}
+
 // New event dialog
-els.newBtn.addEventListener('click', () => els.dialog.showModal());
-els.dialog.querySelector('[data-close]').addEventListener('click', () => els.dialog.close());
-els.form.addEventListener('submit', async e => {
+els.newEventBtn.addEventListener('click', () => els.newEventDialog.showModal());
+els.newEventDialog.querySelector('[data-close]').addEventListener('click', () => els.newEventDialog.close());
+els.newEventForm.addEventListener('submit', async e => {
   if (e.submitter && e.submitter.hasAttribute('data-close')) return;
   e.preventDefault();
-  const fd = new FormData(els.form);
-  const payload = Object.fromEntries(fd);
+  const payload = Object.fromEntries(new FormData(els.newEventForm));
   const feeDollars = parseFloat(payload.fee_dollars);
   if (Number.isFinite(feeDollars)) payload.fee_cents = Math.round(feeDollars * 100);
   delete payload.fee_dollars;
   try {
     await api('/admin/api/events', { method: 'POST', body: JSON.stringify(payload) });
-    els.dialog.close();
-    els.form.reset();
+    els.newEventDialog.close();
+    els.newEventForm.reset();
     showToast('Event saved.');
     loadStats();
     loadEvents();
@@ -257,13 +370,32 @@ els.form.addEventListener('submit', async e => {
   }
 });
 
-// Surface the signed-in email if Access provided it as a cookie / header echo.
-// (Cloudflare sets the JWT cookie; the email itself isn't exposed to the
-// browser, so we just leave this area blank if we can't detect it.)
+// New subscriber dialog
+if (els.newSubBtn && els.newSubDialog && els.newSubForm) {
+  els.newSubBtn.addEventListener('click', () => els.newSubDialog.showModal());
+  els.newSubDialog.querySelector('[data-close]').addEventListener('click', () => els.newSubDialog.close());
+  els.newSubForm.addEventListener('submit', async e => {
+    if (e.submitter && e.submitter.hasAttribute('data-close')) return;
+    e.preventDefault();
+    const payload = Object.fromEntries(new FormData(els.newSubForm));
+    try {
+      await api('/admin/api/subscribers', { method: 'POST', body: JSON.stringify(payload) });
+      els.newSubDialog.close();
+      els.newSubForm.reset();
+      showToast('Subscriber added.');
+      loadStats();
+      loadSubscribers();
+    } catch (err) {
+      showToast(err.message, { error: true });
+    }
+  });
+}
+
+// Signed-in email (Cloudflare Access)
 fetch('/cdn-cgi/access/get-identity')
   .then(r => r.ok ? r.json() : null)
   .then(j => { if (j?.email) els.email.textContent = j.email; })
   .catch(() => {});
 
 loadStats();
-loadEvents();
+setActiveView('inquiries');
