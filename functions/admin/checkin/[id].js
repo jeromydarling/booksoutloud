@@ -77,6 +77,8 @@ export async function onRequestGet({ params, env }) {
       <div class="count-tile"><span class="count-num" data-count="sold">—</span><span class="count-label">Sold</span></div>
     </div>
 
+    <div class="net-pill" id="net-pill" role="status" aria-live="polite">&middot;</div>
+
     <form id="checkin-form" class="door-form" autocomplete="off">
       <label for="code" class="visually-hidden">Ticket code</label>
       <input id="code" name="code" type="text"

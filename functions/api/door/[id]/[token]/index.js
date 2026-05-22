@@ -14,9 +14,10 @@ function json(status, body) {
   });
 }
 
-export async function onRequestGet({ params, env }) {
+export async function onRequestGet({ request, params, env }) {
   const ev = await loadDoorEvent(env, params.id, params.token);
   if (!ev) return json(404, { ok: false, message: 'Not found.' });
+  const wantFull = new URL(request.url).searchParams.get('full') === '1';
 
   const totals = await env.DB.prepare(
     `SELECT
@@ -36,11 +37,26 @@ export async function onRequestGet({ params, env }) {
      ORDER BY t.checked_in_at DESC LIMIT 20`,
   ).bind(ev.id).all();
 
+  let allTickets;
+  if (wantFull) {
+    const rosterR = await env.DB.prepare(
+      `SELECT t.code, t.holder_name, t.checked_in_at,
+              tt.name AS tier_name,
+              o.buyer_name, o.buyer_email
+       FROM tickets t
+       JOIN ticket_orders o ON o.id = t.order_id
+       JOIN ticket_tiers tt ON tt.id = t.tier_id
+       WHERE o.ticketed_event_id = ? AND o.status = 'paid'`,
+    ).bind(ev.id).all();
+    allTickets = rosterR.results || [];
+  }
+
   return json(200, {
     ok: true,
     event: { id: ev.id, title: ev.title, starts_at: ev.starts_at, location_name: ev.location_name, capacity: ev.capacity },
     sold: totals?.sold || 0,
     checked_in: totals?.checked_in || 0,
     recent: recentR.results || [],
+    ...(wantFull ? { all: allTickets } : {}),
   });
 }

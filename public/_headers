@@ -14,3 +14,9 @@
 
 /favicon.svg
   Cache-Control: public, max-age=604800
+
+# Door check-in service worker. Allowed to control the whole site so it can
+# front both /admin/checkin/* and /door/* from a single file.
+/checkin/sw.js
+  Cache-Control: no-cache
+  Service-Worker-Allowed: /

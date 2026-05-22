@@ -11,9 +11,10 @@ function json(status, body) {
   });
 }
 
-export async function onRequestGet({ params, env }) {
+export async function onRequestGet({ request, params, env }) {
   const id = parseInt(params.id, 10);
   if (!Number.isInteger(id) || id <= 0) return json(400, { ok: false, message: 'Bad id.' });
+  const wantFull = new URL(request.url).searchParams.get('full') === '1';
 
   const ev = await env.DB.prepare(
     `SELECT id, title, starts_at, location_name, capacity FROM ticketed_events WHERE id = ?`,
@@ -40,11 +41,26 @@ export async function onRequestGet({ params, env }) {
      ORDER BY t.checked_in_at DESC LIMIT 20`,
   ).bind(id).all();
 
+  let allTickets;
+  if (wantFull) {
+    const rosterR = await env.DB.prepare(
+      `SELECT t.code, t.holder_name, t.checked_in_at,
+              tt.name AS tier_name,
+              o.buyer_name, o.buyer_email
+       FROM tickets t
+       JOIN ticket_orders o ON o.id = t.order_id
+       JOIN ticket_tiers tt ON tt.id = t.tier_id
+       WHERE o.ticketed_event_id = ? AND o.status = 'paid'`,
+    ).bind(id).all();
+    allTickets = rosterR.results || [];
+  }
+
   return json(200, {
     ok: true,
     event: ev,
     sold: totals?.sold || 0,
     checked_in: totals?.checked_in || 0,
     recent: recentR.results || [],
+    ...(wantFull ? { all: allTickets } : {}),
   });
 }
