@@ -67,6 +67,7 @@ const els = {
   newTicketedEventBtn: document.getElementById('new-ticketed-event-btn'),
   newTicketedEventDialog: document.getElementById('new-ticketed-event-dialog'),
   newTicketedEventForm: document.getElementById('new-ticketed-event-form'),
+  doorLinkDialog: document.getElementById('door-link-dialog'),
   // shared
   tabs: document.querySelectorAll('.admin-tab'),
   search: document.getElementById('search'),
@@ -650,13 +651,100 @@ function renderTicketedEvents() {
           <div class="muted">${esc(when)} · ${esc(e.venue_name)} · ${esc(sold)} ticket${sold === 1 ? '' : 's'} sold · ${esc(gross)}</div>
         </div>
         <div class="broadcast-status"><span class="badge ${esc(e.status)}">${esc(e.status)}</span></div>
-        <div class="broadcast-actions" style="display:flex; gap:6px;">
+        <div class="broadcast-actions" style="display:flex; gap:6px; flex-wrap:wrap;">
           <a class="btn ghost small" href="/tickets/${esc(e.slug)}" target="_blank" rel="noopener">Public page</a>
           <a class="btn ghost small" href="/admin/checkin/${esc(e.id)}">Door</a>
+          <button type="button" class="btn ghost small" data-action="door-link">Volunteer link</button>
         </div>
       </div>
     `;
   }).join('');
+  els.ticketedEventList.querySelectorAll('[data-action="door-link"]').forEach(btn => {
+    const row = btn.closest('.broadcast-row');
+    const id = parseInt(row.dataset.id, 10);
+    btn.addEventListener('click', () => openDoorLinkDialog(id));
+  });
+}
+
+async function openDoorLinkDialog(id) {
+  const dlg = els.doorLinkDialog;
+  if (!dlg) return;
+  const urlEl    = dlg.querySelector('[data-door-url]');
+  const emptyEl  = dlg.querySelector('[data-door-empty]');
+  const rotateBtn = dlg.querySelector('[data-action="rotate"]');
+  const revokeBtn = dlg.querySelector('[data-action="revoke"]');
+  const copyBtn   = dlg.querySelector('[data-action="copy"]');
+
+  async function refresh() {
+    try {
+      const res = await api(`/admin/api/ticketed-events/${id}/door-token`);
+      if (res.url) {
+        urlEl.textContent = res.url;
+        urlEl.dataset.url = res.url;
+        urlEl.hidden = false;
+        emptyEl.hidden = true;
+        copyBtn.disabled = false;
+        revokeBtn.disabled = false;
+        rotateBtn.textContent = 'Regenerate';
+      } else {
+        urlEl.textContent = '';
+        delete urlEl.dataset.url;
+        urlEl.hidden = true;
+        emptyEl.hidden = false;
+        copyBtn.disabled = true;
+        revokeBtn.disabled = true;
+        rotateBtn.textContent = 'Mint link';
+      }
+    } catch (err) {
+      showToast(err.message, { error: true });
+    }
+  }
+
+  rotateBtn.onclick = async () => {
+    try {
+      const res = await api(`/admin/api/ticketed-events/${id}/door-token`, { method: 'POST' });
+      showToast('Volunteer link minted.');
+      urlEl.textContent = res.url;
+      urlEl.dataset.url = res.url;
+      urlEl.hidden = false;
+      emptyEl.hidden = true;
+      copyBtn.disabled = false;
+      revokeBtn.disabled = false;
+      rotateBtn.textContent = 'Regenerate';
+      await copyToClipboard(res.url);
+    } catch (err) {
+      showToast(err.message, { error: true });
+    }
+  };
+
+  revokeBtn.onclick = async () => {
+    if (!confirm('Revoke this link? Volunteers using it will lose access immediately.')) return;
+    try {
+      await api(`/admin/api/ticketed-events/${id}/door-token`, { method: 'DELETE' });
+      showToast('Link revoked.');
+      refresh();
+    } catch (err) {
+      showToast(err.message, { error: true });
+    }
+  };
+
+  copyBtn.onclick = async () => {
+    const url = urlEl.dataset.url;
+    if (!url) return;
+    await copyToClipboard(url);
+  };
+
+  await refresh();
+  dlg.showModal();
+}
+
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    showToast('Copied to clipboard.');
+  } catch {
+    showToast('Copy unsupported — select the URL manually.', { error: true });
+  }
 }
 
 // ── View switching ───────────────────────────────────────────────────────

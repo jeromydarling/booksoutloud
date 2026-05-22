@@ -144,6 +144,31 @@
     </form>
   </dialog>
 
+  <!-- Volunteer door link modal -->
+  <dialog id="door-link-dialog" class="admin-dialog">
+    <form method="dialog">
+      <div class="dialog-head">
+        <div class="eyebrow">Volunteer access</div>
+        <h2>Door link for this event</h2>
+        <p class="muted small">Share this URL with whoever&rsquo;s working the door. It bypasses Cloudflare Access and works for this one event only. Revoke it any time.</p>
+      </div>
+      <div class="dialog-grid">
+        <div class="full">
+          <code class="door-url" data-door-url hidden></code>
+          <div class="muted small" data-door-empty>No link yet. Mint one to share with a volunteer.</div>
+        </div>
+        <div class="full" style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn ghost small" data-action="copy">Copy</button>
+          <button type="button" class="btn ghost small" data-action="rotate">Mint link</button>
+          <button type="button" class="btn ghost small" data-action="revoke" disabled>Revoke</button>
+        </div>
+      </div>
+      <div class="dialog-foot">
+        <button type="submit" class="btn primary small">Close</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- New ticketed event modal -->
   <dialog id="new-ticketed-event-dialog" class="admin-dialog">
     <form id="new-ticketed-event-form" method="dialog">
