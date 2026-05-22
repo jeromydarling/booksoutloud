@@ -62,6 +62,11 @@
       <h1>Wire up payments</h1>
       <p class="muted">Paste two values, click the button. The Function creates a Stripe webhook, captures the signing secret, writes both secrets into this project's Cloudflare Pages env (Production + Preview), and triggers a redeploy. ~5 seconds end-to-end. No terminal.</p>
 
+      <div class="setup-step" style="border-left-color:#7a2c2c; background:rgba(122,44,44,.06);">
+        <h3 style="color:#7a2c2c;">Before you flip to LIVE mode</h3>
+        <p>Walk the pre-flight checklist in <a href="https://github.com/jeromydarling/booksoutloud/blob/main/RUNBOOK.md#3-%EF%B8%8F-pre-flight-checklist-before-going-live" target="_blank" rel="noopener">RUNBOOK.md &sect; 3</a> first. Test-mode end-to-end, then a $1 live self-test, then announce. The wizard prompts again before doing anything irreversible with an <code>sk_live_</code> key.</p>
+      </div>
+
       <div class="setup-step">
         <h3>1. Mint a Cloudflare API token</h3>
         <ol>

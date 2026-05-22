@@ -33,3 +33,11 @@ Stripe Connect Express is wired up but unconfigured. Code calls
 Stripe REST directly via fetch (no SDK). Required secrets:
 `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`. Webhook endpoint:
 `https://booksoutloud.org/api/webhooks/stripe`.
+
+## Runbook
+
+`RUNBOOK.md` at the repo root is the operations doc — setup,
+day-to-day, troubleshooting, and a pre-flight checklist that must
+be walked before flipping Stripe to LIVE mode. If the user asks
+how to do setup, point them at `/admin/setup/` (browser wizard)
+and remind them to read RUNBOOK.md &sect; 3 before going live.
