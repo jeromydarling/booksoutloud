@@ -260,6 +260,41 @@
   margin: 18px 0;
 }
 
+/* Venue status badges */
+.badge.venue-pending     { color: #6b4f1d; }
+.badge.venue-onboarding  { color: #6a541e; border-color: #6a541e55; }
+.badge.venue-enabled     { color: #1f5d3a; border-color: #1f5d3a55; }
+.badge.venue-restricted  { color: #7a2c2c; border-color: #7a2c2c55; }
+.badge.venue-disabled    { color: #7a2c2c; border-color: #7a2c2c55; }
+
+/* Ticketed-event status badges */
+.badge.draft     { color: #6b4f1d; }
+.badge.on_sale   { color: #1f5d3a; border-color: #1f5d3a55; }
+.badge.sold_out  { color: #234274; border-color: #23427455; }
+.badge.canceled  { color: #7a2c2c; border-color: #7a2c2c55; }
+.badge.past      { color: #655e55; }
+
+/* Ticket tier editor rows */
+.tier-rows { display: flex; flex-direction: column; gap: 8px; }
+.tier-row {
+  display: grid; grid-template-columns: 1.5fr 1fr 1fr 32px; gap: 8px; align-items: center;
+}
+.tier-row input {
+  font: inherit; font-family: var(--font-serif); font-size: .95rem;
+  padding: 8px 10px; border: 1px solid rgba(138,100,50,.22);
+  background: rgba(255,255,255,.6); border-radius: 2px; color: var(--ink);
+}
+.tier-row button[data-remove] {
+  font: inherit; width: 32px; height: 32px;
+  background: transparent; border: 1px solid rgba(138,100,50,.22);
+  color: var(--muted); cursor: pointer; border-radius: 2px;
+}
+.tier-row button[data-remove]:hover { color: #7a2c2c; border-color: #7a2c2c55; }
+
+@media (max-width: 700px) {
+  .tier-row { grid-template-columns: 1fr; }
+}
+
 /* Composer dialog */
 .compose-dialog { max-width: 980px; width: 95vw; }
 .compose-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }

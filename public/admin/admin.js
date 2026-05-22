@@ -29,6 +29,8 @@ const state = {
   broadcasts: [],
   activeBroadcastPoll: null,
   recipientCount: 0,
+  venues: [],
+  ticketedEvents: [],
 };
 
 const els = {
@@ -53,6 +55,18 @@ const els = {
   composeForm: document.getElementById('compose-form'),
   broadcastDetailDialog: document.getElementById('broadcast-detail-dialog'),
   editorHost: document.getElementById('compose-editor-host'),
+  // venues
+  venuesView: document.getElementById('venues-view'),
+  venueList: document.getElementById('venue-list'),
+  newVenueBtn: document.getElementById('new-venue-btn'),
+  newVenueDialog: document.getElementById('new-venue-dialog'),
+  newVenueForm: document.getElementById('new-venue-form'),
+  // ticketed events
+  ticketsView: document.getElementById('tickets-view'),
+  ticketedEventList: document.getElementById('ticketed-event-list'),
+  newTicketedEventBtn: document.getElementById('new-ticketed-event-btn'),
+  newTicketedEventDialog: document.getElementById('new-ticketed-event-dialog'),
+  newTicketedEventForm: document.getElementById('new-ticketed-event-form'),
   // shared
   tabs: document.querySelectorAll('.admin-tab'),
   search: document.getElementById('search'),
@@ -533,20 +547,135 @@ async function submitBroadcast(mode) {
   }
 }
 
+// ── Venues ───────────────────────────────────────────────────────────────
+function money(cents, currency = 'USD') {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format((cents || 0) / 100);
+}
+
+async function loadVenues() {
+  els.venueList.innerHTML = `<div class="event-empty muted">Loading&hellip;</div>`;
+  const params = new URLSearchParams();
+  if (state.search) params.set('q', state.search);
+  try {
+    const { venues } = await api(`/admin/api/venues?${params}`);
+    state.venues = venues;
+    renderVenues();
+  } catch (err) {
+    els.venueList.innerHTML = `<div class="event-empty muted">${esc(err.message)}</div>`;
+  }
+}
+
+function venueStatusBadge(v) {
+  const label = v.stripe_status;
+  return `<span class="badge venue-${esc(label)}">${esc(label)}</span>`;
+}
+
+function renderVenues() {
+  if (!state.venues?.length) {
+    els.venueList.innerHTML = `<div class="event-empty muted">No venues yet. Click <strong>Add venue</strong> to get started.</div>`;
+    return;
+  }
+  els.venueList.innerHTML = state.venues.map(v => `
+    <div class="broadcast-row" data-id="${v.id}">
+      <div class="broadcast-main">
+        <strong>${esc(v.name)}</strong>
+        <div class="muted">${esc(v.email)}${v.contact_name ? ' · ' + esc(v.contact_name) : ''} · split ${esc(v.default_split_pct)}% · ${esc(v.event_count || 0)} event${v.event_count === 1 ? '' : 's'}</div>
+        ${v.stripe_account_id ? `<div class="muted small" style="font-family:monospace;">${esc(v.stripe_account_id)}</div>` : ''}
+      </div>
+      <div class="broadcast-status">${venueStatusBadge(v)}</div>
+      <div class="broadcast-actions" style="display:flex; gap:6px;">
+        <button type="button" class="btn ghost small" data-action="onboard">${v.stripe_account_id ? 'Resend link' : 'Onboard'}</button>
+        ${v.stripe_account_id ? `<button type="button" class="btn ghost small" data-action="refresh">Refresh</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+  els.venueList.querySelectorAll('.broadcast-row').forEach(row => {
+    const id = parseInt(row.dataset.id, 10);
+    row.querySelector('[data-action="onboard"]').addEventListener('click', () => onboardVenue(id));
+    const refresh = row.querySelector('[data-action="refresh"]');
+    if (refresh) refresh.addEventListener('click', () => refreshVenue(id));
+  });
+}
+
+async function onboardVenue(id) {
+  try {
+    const res = await api(`/admin/api/venues/${id}/onboard`, { method: 'POST' });
+    if (!res.url) throw new Error('No onboarding URL returned.');
+    if (confirm(`Open the Stripe onboarding flow now?\n\nYou can also send this link to the venue:\n${res.url}`)) {
+      window.open(res.url, '_blank', 'noopener');
+    }
+    await navigator.clipboard?.writeText(res.url).catch(() => {});
+    showToast('Onboarding link copied to clipboard.');
+    loadVenues();
+  } catch (err) {
+    showToast(err.message, { error: true });
+  }
+}
+
+async function refreshVenue(id) {
+  try {
+    const res = await api(`/admin/api/venues/${id}/refresh`, { method: 'POST' });
+    showToast(`Stripe says: ${res.status}.`);
+    loadVenues();
+  } catch (err) {
+    showToast(err.message, { error: true });
+  }
+}
+
+// ── Ticketed events ──────────────────────────────────────────────────────
+async function loadTicketedEvents() {
+  els.ticketedEventList.innerHTML = `<div class="event-empty muted">Loading&hellip;</div>`;
+  try {
+    const { events } = await api('/admin/api/ticketed-events');
+    state.ticketedEvents = events;
+    renderTicketedEvents();
+  } catch (err) {
+    els.ticketedEventList.innerHTML = `<div class="event-empty muted">${esc(err.message)}</div>`;
+  }
+}
+
+function renderTicketedEvents() {
+  if (!state.ticketedEvents?.length) {
+    els.ticketedEventList.innerHTML = `<div class="event-empty muted">No ticketed events yet. Add a venue first, then create one here.</div>`;
+    return;
+  }
+  els.ticketedEventList.innerHTML = state.ticketedEvents.map(e => {
+    const when = fmtTimestamp(e.starts_at);
+    const sold = e.tickets_sold || 0;
+    const gross = money(e.gross_cents || 0, e.currency);
+    return `
+      <a class="broadcast-row" href="/tickets/${esc(e.slug)}" target="_blank" rel="noopener" data-id="${e.id}" style="text-decoration:none; color:inherit;">
+        <div class="broadcast-main">
+          <strong>${esc(e.title)}</strong>
+          <div class="muted">${esc(when)} · ${esc(e.venue_name)} · ${esc(sold)} ticket${sold === 1 ? '' : 's'} sold · ${esc(gross)}</div>
+        </div>
+        <div class="broadcast-status"><span class="badge ${esc(e.status)}">${esc(e.status)}</span></div>
+        <div class="broadcast-actions"><span class="muted small">/tickets/${esc(e.slug)}</span></div>
+      </a>
+    `;
+  }).join('');
+}
+
 // ── View switching ───────────────────────────────────────────────────────
 function setActiveView(view) {
   state.view = view;
   els.tabs.forEach(t => t.classList.toggle('is-active', t.dataset.view === view));
   const isSubs       = view === 'subscribers';
   const isBroadcasts = view === 'broadcasts';
-  const isEvents     = !isSubs && !isBroadcasts;
-  els.subView.hidden = !isSubs;
+  const isVenues     = view === 'venues';
+  const isTickets    = view === 'tickets';
+  const isEvents     = !isSubs && !isBroadcasts && !isVenues && !isTickets;
+  els.subView.hidden        = !isSubs;
   els.broadcastsView.hidden = !isBroadcasts;
-  els.list.hidden = !isEvents;
-  els.newEventBtn.hidden = !isEvents;
-  if (isSubs)       loadSubscribers();
+  if (els.venuesView)  els.venuesView.hidden  = !isVenues;
+  if (els.ticketsView) els.ticketsView.hidden = !isTickets;
+  els.list.hidden           = !isEvents;
+  els.newEventBtn.hidden    = !isEvents;
+  if (isSubs)            loadSubscribers();
   else if (isBroadcasts) loadBroadcasts();
-  else              loadEvents();
+  else if (isVenues)     loadVenues();
+  else if (isTickets)    loadTicketedEvents();
+  else                   loadEvents();
 }
 
 // ── Wiring ───────────────────────────────────────────────────────────────
@@ -560,6 +689,8 @@ els.search.addEventListener('input', e => {
   searchTimer = setTimeout(() => {
     state.search = e.target.value.trim();
     if (state.view === 'subscribers') loadSubscribers();
+    else if (state.view === 'venues') loadVenues();
+    else if (state.view === 'broadcasts' || state.view === 'tickets') {/* search no-op for these */}
     else loadEvents();
   }, 220);
 });
@@ -642,6 +773,83 @@ if (els.newBroadcastBtn && els.composeDialog && els.composeForm && els.editorHos
 // Broadcast detail dialog close
 if (els.broadcastDetailDialog) {
   els.broadcastDetailDialog.querySelector('[data-close]').addEventListener('click', () => els.broadcastDetailDialog.close());
+}
+
+// New venue dialog
+if (els.newVenueBtn && els.newVenueDialog && els.newVenueForm) {
+  els.newVenueBtn.addEventListener('click', () => els.newVenueDialog.showModal());
+  els.newVenueDialog.querySelector('[data-close]').addEventListener('click', () => els.newVenueDialog.close());
+  els.newVenueForm.addEventListener('submit', async e => {
+    if (e.submitter && e.submitter.hasAttribute('data-close')) return;
+    e.preventDefault();
+    const payload = Object.fromEntries(new FormData(els.newVenueForm));
+    try {
+      await api('/admin/api/venues', { method: 'POST', body: JSON.stringify(payload) });
+      els.newVenueDialog.close();
+      els.newVenueForm.reset();
+      showToast('Venue added. Click "Onboard" to send the Stripe link.');
+      loadVenues();
+    } catch (err) {
+      showToast(err.message, { error: true });
+    }
+  });
+}
+
+// New ticketed event dialog
+if (els.newTicketedEventBtn && els.newTicketedEventDialog && els.newTicketedEventForm) {
+  const form = els.newTicketedEventForm;
+  const tierRows = form.querySelector('[data-tier-rows]');
+
+  function addTierRow(initial = {}) {
+    const row = document.createElement('div');
+    row.className = 'tier-row';
+    row.innerHTML = `
+      <input data-tier-name placeholder="Tier name (e.g. General)" value="${esc(initial.name || '')}" />
+      <input data-tier-price type="number" min="0" step="0.01" placeholder="Price USD" value="${initial.price ?? ''}" />
+      <input data-tier-cap type="number" min="0" placeholder="Cap (opt)" value="${initial.capacity || ''}" />
+      <button type="button" data-remove>&times;</button>
+    `;
+    row.querySelector('[data-remove]').addEventListener('click', () => row.remove());
+    tierRows.appendChild(row);
+  }
+
+  els.newTicketedEventBtn.addEventListener('click', async () => {
+    // Populate venue dropdown with enabled venues.
+    try {
+      const { venues } = await api('/admin/api/venues');
+      const select = form.querySelector('[data-venue-select]');
+      select.innerHTML = `<option value="">— Choose —</option>` + (venues || []).map(v =>
+        `<option value="${v.id}"${v.stripe_status !== 'enabled' ? ' disabled' : ''}>${esc(v.name)}${v.stripe_status !== 'enabled' ? ` (${v.stripe_status})` : ''}</option>`
+      ).join('');
+    } catch {/* ignore */}
+    tierRows.innerHTML = '';
+    addTierRow({ name: 'General admission', price: 20 });
+    els.newTicketedEventDialog.showModal();
+  });
+
+  form.querySelector('[data-action="add-tier"]').addEventListener('click', () => addTierRow());
+  els.newTicketedEventDialog.querySelector('[data-close]').addEventListener('click', () => els.newTicketedEventDialog.close());
+
+  form.addEventListener('submit', async e => {
+    if (e.submitter && e.submitter.hasAttribute('data-close')) return;
+    e.preventDefault();
+    const fd = new FormData(form);
+    const payload = Object.fromEntries(fd);
+    payload.tiers = [...tierRows.querySelectorAll('.tier-row')].map(r => ({
+      name: r.querySelector('[data-tier-name]').value.trim(),
+      price_cents: Math.round((parseFloat(r.querySelector('[data-tier-price]').value) || 0) * 100),
+      capacity: parseInt(r.querySelector('[data-tier-cap]').value, 10) || null,
+    })).filter(t => t.name);
+    try {
+      const res = await api('/admin/api/ticketed-events', { method: 'POST', body: JSON.stringify(payload) });
+      els.newTicketedEventDialog.close();
+      form.reset();
+      showToast(`Created. Public URL: /tickets/${res.slug}`);
+      loadTicketedEvents();
+    } catch (err) {
+      showToast(err.message, { error: true });
+    }
+  });
 }
 
 // Signed-in email (Cloudflare Access)

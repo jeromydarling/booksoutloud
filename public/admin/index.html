@@ -53,10 +53,40 @@
         <button class="admin-tab" role="tab" data-view="broadcasts">
           Broadcasts
         </button>
+        <button class="admin-tab" role="tab" data-view="venues">
+          Venues
+        </button>
+        <button class="admin-tab" role="tab" data-view="tickets">
+          Tickets
+        </button>
       </div>
 
       <div id="event-list" class="event-list" aria-live="polite">
         <div class="event-empty muted">Loading&hellip;</div>
+      </div>
+
+      <div id="venues-view" class="subscribers-view" hidden>
+        <div class="subscribers-head">
+          <div class="muted">Venues are partner organizations that receive ticket revenue via Stripe Connect. Add one, then send the onboarding link.</div>
+          <div class="subscribers-actions">
+            <button id="new-venue-btn" class="btn primary small">+ Add venue</button>
+          </div>
+        </div>
+        <div id="venue-list" class="broadcast-list" aria-live="polite">
+          <div class="event-empty muted">Loading&hellip;</div>
+        </div>
+      </div>
+
+      <div id="tickets-view" class="subscribers-view" hidden>
+        <div class="subscribers-head">
+          <div class="muted">Ticketed events sell through booksoutloud.org. Money flows to the venue&rsquo;s Stripe; the platform fee stays with you.</div>
+          <div class="subscribers-actions">
+            <button id="new-ticketed-event-btn" class="btn primary small">+ New ticketed event</button>
+          </div>
+        </div>
+        <div id="ticketed-event-list" class="broadcast-list" aria-live="polite">
+          <div class="event-empty muted">Loading&hellip;</div>
+        </div>
       </div>
 
       <div id="broadcasts-view" class="broadcasts-view" hidden>
@@ -90,6 +120,72 @@
       </div>
     </div>
   </main>
+
+  <!-- New venue modal -->
+  <dialog id="new-venue-dialog" class="admin-dialog">
+    <form id="new-venue-form" method="dialog">
+      <div class="dialog-head">
+        <div class="eyebrow">Venue</div>
+        <h2>Add a venue partner</h2>
+      </div>
+      <div class="dialog-grid">
+        <label class="full">Organization name <input name="name" required placeholder="St. Catherine's Parish" /></label>
+        <label>Contact name <input name="contact_name" placeholder="Fr. Michael Reyes" /></label>
+        <label>Contact email <input name="email" type="email" required /></label>
+        <label>Phone <input name="phone" /></label>
+        <label>Venue share % <input name="default_split_pct" type="number" min="0" max="100" value="80" /></label>
+        <label class="full">Address <input name="address" placeholder="123 Main St, Fargo ND" /></label>
+        <label class="full">Notes <textarea name="notes" rows="3"></textarea></label>
+      </div>
+      <div class="dialog-foot">
+        <button type="button" class="btn ghost small" data-close>Cancel</button>
+        <button type="submit" class="btn primary small">Add venue</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- New ticketed event modal -->
+  <dialog id="new-ticketed-event-dialog" class="admin-dialog">
+    <form id="new-ticketed-event-form" method="dialog">
+      <div class="dialog-head">
+        <div class="eyebrow">Ticketed event</div>
+        <h2>Set up a ticketed event</h2>
+      </div>
+      <div class="dialog-grid">
+        <label class="full">Title <input name="title" required placeholder="The Screwtape Letters — Lent at St. Catherine&rsquo;s" /></label>
+        <label class="full">Subtitle <input name="subtitle" placeholder="An evening of C.S. Lewis read aloud" /></label>
+        <label>Venue
+          <select name="venue_id" required data-venue-select>
+            <option value="">— Choose —</option>
+          </select>
+        </label>
+        <label>Status
+          <select name="status">
+            <option value="draft">Draft (not on sale)</option>
+            <option value="on_sale">On sale</option>
+          </select>
+        </label>
+        <label>Starts at <input name="starts_at" type="datetime-local" required /></label>
+        <label>Doors open <input name="doors_open_at" type="datetime-local" /></label>
+        <label class="full">Location name <input name="location_name" placeholder="Parish hall" /></label>
+        <label class="full">Location address <input name="location_address" /></label>
+        <label>Capacity <input name="capacity" type="number" min="0" /></label>
+        <label>Venue share %
+          <input name="split_pct" type="number" min="0" max="100" value="80" />
+        </label>
+        <label class="full">Description <textarea name="description" rows="3"></textarea></label>
+        <div class="full">
+          <div class="compose-label" style="margin-bottom:6px;">Ticket tiers</div>
+          <div data-tier-rows class="tier-rows"></div>
+          <button type="button" class="btn ghost small" data-action="add-tier" style="margin-top:8px;">+ Add tier</button>
+        </div>
+      </div>
+      <div class="dialog-foot">
+        <button type="button" class="btn ghost small" data-close>Cancel</button>
+        <button type="submit" class="btn primary small">Create event</button>
+      </div>
+    </form>
+  </dialog>
 
   <!-- Compose broadcast modal -->
   <dialog id="compose-dialog" class="admin-dialog compose-dialog">
