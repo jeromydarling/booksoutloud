@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Setup — Stripe + Cloudflare — BooksOutLoud</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/admin/admin.css" />
+  <style>
+    .setup-card { max-width: 720px; margin: 32px auto; padding: 30px 34px;
+      background: rgba(255,255,255,.62);
+      border: 1px solid rgba(138,100,50,.22);
+      box-shadow: 0 16px 36px rgba(31,29,26,.06); }
+    .setup-card h1 { margin: 4px 0 10px; }
+    .setup-step { margin: 22px 0 18px; padding: 16px 18px;
+      background: rgba(244,239,228,.55); border-left: 3px solid var(--brass); }
+    .setup-step h3 { margin: 0 0 8px; font-size: 1rem; letter-spacing: -.005em; }
+    .setup-step p, .setup-step ol, .setup-step ul { margin: 0 0 8px; color: var(--ink-soft); }
+    .setup-step a { color: var(--brass); }
+    .setup-step code { background: rgba(255,255,255,.6); padding: 1px 6px; font-size: .92em; }
+    .setup-fields { display: grid; gap: 14px; margin: 22px 0 8px; }
+    .setup-fields label { display: flex; flex-direction: column; gap: 6px;
+      font-family: var(--font-sans); font-size: .72rem; letter-spacing: .14em;
+      text-transform: uppercase; color: var(--muted); }
+    .setup-fields input { font: inherit; font-family: 'SFMono-Regular', Menlo, monospace;
+      font-size: .92rem; padding: 10px 12px; color: var(--ink);
+      background: rgba(255,255,255,.7); border: 1px solid rgba(138,100,50,.28); border-radius: 2px; }
+    .setup-fields input:focus { outline: none; border-color: var(--accent); background: #fff; }
+    .setup-fields .hint { font-family: var(--font-serif); text-transform: none;
+      letter-spacing: 0; color: var(--muted); font-size: .82rem; margin-top: 2px; }
+    .setup-foot { display: flex; align-items: center; gap: 14px; margin-top: 22px; flex-wrap: wrap; }
+    .setup-mode { font-family: var(--font-sans); font-size: .72rem;
+      letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .setup-mode strong { color: var(--ink); }
+    .setup-mode .live { color: #7a2c2c; }
+    .setup-status { margin-top: 18px; padding: 14px 18px;
+      border-left: 3px solid var(--brass); background: rgba(255,255,255,.6);
+      font-size: .94rem; display: none; white-space: pre-wrap; line-height: 1.5; }
+    .setup-status.is-success { display: block; border-color: #1f5d3a; color: #1f5d3a; }
+    .setup-status.is-error   { display: block; border-color: #7a2c2c; color: #7a2c2c; }
+    .setup-status.is-working { display: block; }
+    .setup-status .log { display: block; font-family: 'SFMono-Regular', Menlo, monospace;
+      font-size: .82rem; color: var(--ink-soft); margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <header class="admin-bar">
+    <div class="wrap admin-bar-inner">
+      <div class="admin-brand">
+        <a href="/" class="brand">BooksOutLoud</a>
+        <span class="admin-chip">Setup</span>
+      </div>
+      <a class="muted small" href="/admin/">&larr; Back to admin</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="setup-card">
+      <div class="eyebrow">Stripe + Cloudflare</div>
+      <h1>Wire up payments</h1>
+      <p class="muted">Paste two values, click the button. The Function creates a Stripe webhook, captures the signing secret, writes both secrets into this project's Cloudflare Pages env (Production + Preview), and triggers a redeploy. ~5 seconds end-to-end. No terminal.</p>
+
+      <div class="setup-step">
+        <h3>1. Mint a Cloudflare API token</h3>
+        <ol>
+          <li>Open <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener">Cloudflare API tokens</a> in a new tab.</li>
+          <li>Click <strong>Create Token</strong> → <strong>Create Custom Token</strong>.</li>
+          <li>Add one permission: <strong>Account</strong> → <strong>Cloudflare Pages</strong> → <strong>Edit</strong>.</li>
+          <li>Account Resources: include your account. Continue, then Create. Copy the token (revealed once).</li>
+        </ol>
+        <p>This token is used in this one request and discarded — it&rsquo;s not stored anywhere.</p>
+      </div>
+
+      <div class="setup-step">
+        <h3>2. Find your Cloudflare account id</h3>
+        <p>It&rsquo;s a 32-character hex string visible at the bottom right of every page in the Cloudflare dashboard. Or go to <a href="https://dash.cloudflare.com" target="_blank" rel="noopener">dash.cloudflare.com</a> &rarr; right sidebar &rarr; <strong>Account ID</strong> &rarr; copy.</p>
+      </div>
+
+      <div class="setup-step">
+        <h3>3. Get your Stripe secret key</h3>
+        <p>Open <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener">Stripe API keys</a>. Reveal the <strong>Secret key</strong> (test or live mode &mdash; the wizard auto-detects) and copy it. The wizard prompts before any live-mode write.</p>
+      </div>
+
+      <form id="setup-form" class="setup-fields" autocomplete="off">
+        <label>Cloudflare API token
+          <input name="cloudflare_api_token" type="password" autocomplete="off" spellcheck="false" required placeholder="cf_…" />
+          <span class="hint">Pages:Edit permission. Used once, discarded.</span>
+        </label>
+        <label>Cloudflare account id
+          <input name="cloudflare_account_id" type="text" autocomplete="off" spellcheck="false" required placeholder="32 hex chars" pattern="[a-fA-F0-9]{32}" />
+        </label>
+        <label>Stripe secret key
+          <input name="stripe_secret_key" type="password" autocomplete="off" spellcheck="false" required placeholder="sk_live_… or sk_test_…" />
+          <span class="hint">Stored as an encrypted env var on this Pages project after the wizard runs.</span>
+        </label>
+        <label>Cloudflare Pages project name
+          <input name="project" type="text" autocomplete="off" spellcheck="false" required value="booksoutloud" />
+        </label>
+        <label>Webhook URL
+          <input name="webhook_url" type="url" autocomplete="off" spellcheck="false" required />
+          <span class="hint">Stripe will POST events to this URL.</span>
+        </label>
+        <label style="flex-direction:row; align-items:center; gap:8px; text-transform:none; letter-spacing:0; color:var(--ink-soft); font-family:var(--font-serif); font-size:.95rem;">
+          <input name="replace" type="checkbox" style="width:auto; margin:0;" />
+          Replace existing Stripe webhook for this URL (deletes the previous signing secret)
+        </label>
+
+        <div class="setup-foot">
+          <button type="submit" class="btn primary">Wire it up</button>
+          <span class="setup-mode" data-mode>Mode: <strong>—</strong></span>
+        </div>
+        <div id="status" class="setup-status" role="status" aria-live="polite"></div>
+      </form>
+    </div>
+  </main>
+
+  <script src="/admin/setup/setup.js"></script>
+</body>
+</html>
