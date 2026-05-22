@@ -3,7 +3,7 @@
 //
 // Token-gated mirror of /admin/api/checkin/:id/:code.
 
-import { loadDoorEvent, normalizeCode } from '../../../../../_lib/door.js';
+import { loadDoorEvent, normalizeCode } from '../../../../_lib/door.js';
 
 function json(status, body) {
   return new Response(JSON.stringify(body), {
