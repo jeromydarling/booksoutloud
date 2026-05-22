@@ -7,7 +7,7 @@ pages_build_output_dir = "public"
 # or the Cloudflare dashboard under Pages → Settings → Environment variables.
 [vars]
 BOOKING_TO_EMAIL = "jer@jeromydarling.com"
-BOOKING_FROM_EMAIL = "BooksOutLoud <onboarding@resend.dev>"
+BOOKING_FROM_EMAIL = "Books, Out Loud <gardener@thecros.app>"
 SITE_URL = "https://booksoutloud.org"
 # Email allowed to access /admin/*. Must match the address you authorize in
 # Cloudflare Access. Override per-environment in the dashboard if needed.
